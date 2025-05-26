@@ -17,7 +17,7 @@ export default function Header() {
           <input
             type="text"
             placeholder="Search prompts..."
-            className="input pl-10"
+            className="w-full pl-10 pr-4 py-2 rounded-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-500"
           />
         </div>
       </div>
@@ -51,7 +51,7 @@ export default function Header() {
           </button>
           
           {showUserMenu && (
-            <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-900 rounded-lg shadow-lg py-1 border border-gray-200 dark:border-gray-800 z-10 animate-fadeIn">
+            <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-900 rounded-md shadow-lg py-1 border border-gray-200 dark:border-gray-800 z-10 animate-fadeIn">
               <a href="#" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">
                 Profile
               </a>

@@ -55,9 +55,9 @@ export default function Sidebar({ isSidebarOpen, toggleSidebar }: SidebarProps) 
               <NavLink
                 to={item.path}
                 className={({ isActive }) => cn(
-                  "flex items-center px-3 py-2 rounded-lg transition-colors",
+                  "flex items-center px-3 py-2 rounded-md transition-colors",
                   "hover:bg-gray-100 dark:hover:bg-gray-800",
-                  isActive ? "bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400" : "text-gray-700 dark:text-gray-300",
+                  isActive ? "bg-primary-50 dark:bg-gray-800 text-primary-600 dark:text-primary-400" : "text-gray-700 dark:text-gray-300",
                   !isSidebarOpen && "justify-center"
                 )}
                 end
