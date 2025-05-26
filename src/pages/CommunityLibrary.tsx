@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/common/Card';
 import Button from '../components/common/Button';
+import TagBadge from '../components/common/TagBadge';
 import { Search, Filter, Star, Copy, MessageCircle, Tag, ThumbsUp, Download } from 'lucide-react';
 
 export default function CommunityLibrary() {
@@ -130,17 +131,17 @@ export default function CommunityLibrary() {
   return (
     <div className="space-y-6 animate-fadeIn">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Community Library</h1>
+        <h1 className="text-2xl font-bold text-textPrimary">Community Library</h1>
       </div>
 
       <div className="relative">
-        <Search size={20} className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
+        <Search size={20} className="absolute left-4 top-1/2 transform -translate-y-1/2 text-neutralGray-medium" />
         <input
           type="text"
           placeholder="Search prompts, categories, or tags..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-12 pr-4 py-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-800 dark:text-gray-200"
+          className="w-full pl-12 pr-4 py-2 rounded-md bg-white border border-neutralGray text-textPrimary placeholder-textSecondary focus:outline-none focus:ring-2 focus:ring-accentBlue focus:border-accentBlue"
         />
       </div>
 
@@ -157,20 +158,20 @@ export default function CommunityLibrary() {
             <CardContent className="space-y-6">
               {/* Categories */}
               <div>
-                <h3 className="font-medium text-gray-900 dark:text-white mb-2">Categories</h3>
+                <h3 className="font-medium text-textPrimary mb-2">Categories</h3>
                 <div className="space-y-2">
                   {categories.map(category => (
                     <button
                       key={category.id}
                       className={`flex items-center justify-between w-full px-3 py-2 rounded-md text-left text-sm ${
                         selectedCategory === category.id
-                          ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
-                          : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'
+                          ? 'bg-accentBlue/20 text-accentBlue'
+                          : 'hover:bg-neutralGray-light/60 text-textSecondary'
                       }`}
                       onClick={() => setSelectedCategory(selectedCategory === category.id ? null : category.id)}
                     >
                       <span>{category.name}</span>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">{category.count}</span>
+                      <span className="text-xs text-textSecondary">{category.count}</span>
                     </button>
                   ))}
                 </div>
@@ -178,20 +179,20 @@ export default function CommunityLibrary() {
 
               {/* Models */}
               <div>
-                <h3 className="font-medium text-gray-900 dark:text-white mb-2">Models</h3>
+                <h3 className="font-medium text-textPrimary mb-2">Models</h3>
                 <div className="space-y-2">
                   {models.map(model => (
                     <button
                       key={model.id}
                       className={`flex items-center justify-between w-full px-3 py-2 rounded-md text-left text-sm ${
                         selectedModel === model.id
-                          ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
-                          : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'
+                          ? 'bg-accentBlue/20 text-accentBlue'
+                          : 'hover:bg-neutralGray-light/60 text-textSecondary'
                       }`}
                       onClick={() => setSelectedModel(selectedModel === model.id ? null : model.id)}
                     >
                       <span>{model.name}</span>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">{model.count}</span>
+                      <span className="text-xs text-textSecondary">{model.count}</span>
                     </button>
                   ))}
                 </div>
@@ -199,11 +200,11 @@ export default function CommunityLibrary() {
 
               {/* Sort Order */}
               <div>
-                <h3 className="font-medium text-gray-900 dark:text-white mb-2">Sort By</h3>
+                <h3 className="font-medium text-textPrimary mb-2">Sort By</h3>
                 <select
                   value={selectedSort}
                   onChange={(e) => setSelectedSort(e.target.value)}
-                  className="w-full p-2 rounded-md bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="block w-full appearance-none bg-white border border-neutralGray text-textPrimary rounded-md px-3 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-accentBlue focus:border-accentBlue"
                 >
                   <option value="popular">Most Popular</option>
                   <option value="rating">Highest Rated</option>
@@ -240,33 +241,28 @@ export default function CommunityLibrary() {
               >
                 <CardContent className="p-5">
                   <div className="flex items-start justify-between">
-                    <h3 className="font-semibold text-lg text-gray-900 dark:text-white">{prompt.title}</h3>
-                    <div className="flex items-center text-yellow-500">
+                    <h3 className="font-semibold text-lg text-textPrimary">{prompt.title}</h3>
+                    <div className="flex items-center text-accentBlue">
                       <Star size={16} className="fill-current" />
                       <span className="ml-1 text-sm font-medium">{prompt.rating}</span>
                     </div>
                   </div>
                   
-                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-300 line-clamp-2">
+                  <p className="mt-2 text-sm text-textSecondary line-clamp-2">
                     {prompt.description}
                   </p>
                   
                   <div className="mt-3 flex flex-wrap gap-1">
                     {prompt.tags.map(tag => (
-                      <span
-                        key={tag}
-                        className="px-2 py-1 text-xs rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
-                      >
-                        {tag}
-                      </span>
+                      <TagBadge key={tag} variant="gray">{tag}</TagBadge>
                     ))}
                   </div>
                   
                   <div className="mt-4 flex items-center justify-between">
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                      by <span className="font-medium text-gray-700 dark:text-gray-300">{prompt.author}</span>
+                    <div className="text-sm text-textSecondary">
+                      by <span className="font-medium text-textPrimary">{prompt.author}</span>
                     </div>
-                    <div className="flex items-center space-x-3 text-sm text-gray-500 dark:text-gray-400">
+                    <div className="flex items-center space-x-3 text-sm text-textSecondary">
                       <div className="flex items-center">
                         <MessageCircle size={14} className="mr-1" />
                         <span>{prompt.reviews}</span>
@@ -283,10 +279,10 @@ export default function CommunityLibrary() {
           </div>
           
           {sortedPrompts.length === 0 && (
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
-              <Search size={40} className="mx-auto mb-4 text-gray-400" />
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">No prompts found</h3>
-              <p className="text-gray-500 dark:text-gray-400 mb-4">
+            <div className="bg-white rounded-lg shadow p-8 text-center text-textPrimary">
+              <Search size={40} className="mx-auto mb-4 text-neutralGray-medium" />
+              <h3 className="text-lg font-medium text-textPrimary mb-1">No prompts found</h3>
+              <p className="text-textSecondary mb-4">
                 Try adjusting your search or filters to find what you're looking for.
               </p>
               <Button 
@@ -308,30 +304,30 @@ export default function CommunityLibrary() {
       {/* Prompt Detail Modal */}
       {selectedPrompt && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto animate-fadeIn">
+          <div className="bg-background rounded-lg shadow-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto animate-fadeIn">
             <div className="p-6">
               <div className="flex justify-between items-start">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                  <h2 className="text-2xl font-bold text-textPrimary">
                     {communityPrompts.find(p => p.id === selectedPrompt)?.title}
                   </h2>
                   <div className="flex items-center mt-2">
-                    <span className="text-sm text-gray-500 dark:text-gray-400 mr-3">
+                    <span className="text-sm text-textSecondary mr-3">
                       by {communityPrompts.find(p => p.id === selectedPrompt)?.author}
                     </span>
-                    <div className="flex items-center text-yellow-500">
+                    <div className="flex items-center text-accentBlue">
                       <Star size={16} className="fill-current" />
                       <span className="ml-1 text-sm font-medium">
                         {communityPrompts.find(p => p.id === selectedPrompt)?.rating}
                       </span>
-                      <span className="ml-1 text-sm text-gray-500 dark:text-gray-400">
+                      <span className="ml-1 text-sm text-textSecondary">
                         ({communityPrompts.find(p => p.id === selectedPrompt)?.reviews} reviews)
                       </span>
                     </div>
                   </div>
                 </div>
                 <button 
-                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                  className="text-neutralGray-medium hover:text-textPrimary"
                   onClick={() => setSelectedPrompt(null)}
                 >
                   <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -341,28 +337,23 @@ export default function CommunityLibrary() {
               </div>
               
               <div className="mt-4">
-                <p className="text-gray-700 dark:text-gray-300">
+                <p className="text-textPrimary">
                   {communityPrompts.find(p => p.id === selectedPrompt)?.description}
                 </p>
               </div>
               
               <div className="mt-4 flex items-center">
-                <Tag size={16} className="text-gray-500 dark:text-gray-400 mr-2" />
+                <Tag size={16} className="text-neutralGray-medium mr-2" />
                 <div className="flex flex-wrap gap-1">
                   {communityPrompts.find(p => p.id === selectedPrompt)?.tags.map(tag => (
-                    <span
-                      key={tag}
-                      className="px-2 py-1 text-xs rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
-                    >
-                      {tag}
-                    </span>
+                    <TagBadge key={tag} variant="gray">{tag}</TagBadge>
                   ))}
                 </div>
               </div>
               
-              <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-md">
+              <div className="mt-6 p-4 bg-neutralGray-light/40 rounded-md">
                 <div className="flex justify-between items-center mb-2">
-                  <h3 className="font-medium text-gray-900 dark:text-white">Prompt Content Preview</h3>
+                  <h3 className="font-medium text-textPrimary">Prompt Content Preview</h3>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -371,7 +362,7 @@ export default function CommunityLibrary() {
                     Copy
                   </Button>
                 </div>
-                <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded p-3 h-48 overflow-y-auto font-mono text-sm text-gray-800 dark:text-gray-200">
+                <div className="bg-white border border-neutralGray-light rounded p-3 h-48 overflow-y-auto font-mono text-sm text-textPrimary">
                   {selectedPrompt === 1 && `You are a versatile content creator assistant.
 
 Task: Help users create engaging, high-quality content for various platforms including blog posts, social media, and email newsletters.
@@ -406,36 +397,36 @@ Always ask clarifying questions if the code's purpose is unclear.`}
               </div>
               
               <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-md">
-                  <h3 className="font-medium text-gray-900 dark:text-white mb-3">Compatible With</h3>
+                <div className="p-4 bg-neutralGray-light/40 rounded-md">
+                  <h3 className="font-medium text-textPrimary mb-3">Compatible With</h3>
                   <div className="space-y-2">
                     <div className="flex items-center">
-                      <div className="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 dark:text-primary-400 mr-3">
+                      <div className="w-8 h-8 rounded-full bg-accentBlue/20 flex items-center justify-center text-accentBlue mr-3">
                         🤖
                       </div>
-                      <span className="text-gray-700 dark:text-gray-300">
+                      <span className="text-textPrimary">
                         {communityPrompts.find(p => p.id === selectedPrompt)?.model}
                       </span>
                     </div>
                   </div>
                 </div>
                 
-                <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-md">
-                  <h3 className="font-medium text-gray-900 dark:text-white mb-3">Stats</h3>
+                <div className="p-4 bg-neutralGray-light/40 rounded-md">
+                  <h3 className="font-medium text-textPrimary mb-3">Stats</h3>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-500 dark:text-gray-400">Downloads</span>
-                      <span className="font-medium text-gray-900 dark:text-white">
+                      <span className="text-textSecondary">Downloads</span>
+                      <span className="font-medium text-textPrimary">
                         {communityPrompts.find(p => p.id === selectedPrompt)?.downloads}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-500 dark:text-gray-400">Added</span>
-                      <span className="font-medium text-gray-900 dark:text-white">2 months ago</span>
+                      <span className="text-textSecondary">Added</span>
+                      <span className="font-medium text-textPrimary">2 months ago</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-500 dark:text-gray-400">Last updated</span>
-                      <span className="font-medium text-gray-900 dark:text-white">2 weeks ago</span>
+                      <span className="text-textSecondary">Last updated</span>
+                      <span className="font-medium text-textPrimary">2 weeks ago</span>
                     </div>
                   </div>
                 </div>

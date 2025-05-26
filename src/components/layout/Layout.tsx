@@ -11,7 +11,7 @@ interface LayoutProps {
 
 export default function Layout({ children, isSidebarOpen, toggleSidebar }: LayoutProps) {
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100">
+    <div className="min-h-screen bg-background text-textPrimary">
       <Sidebar isSidebarOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
       
       <div className={cn(

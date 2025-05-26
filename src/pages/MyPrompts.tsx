@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/common/Card';
 import Button from '../components/common/Button';
+import TagBadge from '../components/common/TagBadge';
 import { Plus, Filter, Download, UploadCloud, Tag, Search, Edit, Trash, Copy, Eye } from 'lucide-react';
 
 export default function MyPrompts() {
@@ -109,7 +110,7 @@ export default function MyPrompts() {
   return (
     <div className="space-y-6 animate-fadeIn">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">My Prompts</h1>
+        <h1 className="text-2xl font-bold text-textPrimary">My Prompts</h1>
         <div className="flex space-x-3">
           <Button variant="outline" leftIcon={<UploadCloud size={16} />}>Import</Button>
           <Button variant="outline" leftIcon={<Download size={16} />}>Export</Button>
@@ -130,53 +131,51 @@ export default function MyPrompts() {
             <CardContent className="space-y-6">
               {/* Search */}
               <div>
-                <label htmlFor="search" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label htmlFor="search" className="block text-sm font-medium text-textSecondary mb-1">
                   Search
                 </label>
                 <div className="relative">
-                  <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutralGray-medium" />
                   <input
                     id="search"
                     type="text"
                     placeholder="Search prompts..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 rounded-md bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full pl-10 pr-4 py-2 rounded-md bg-white border border-neutralGray text-textPrimary placeholder-textSecondary focus:outline-none focus:ring-2 focus:ring-accentBlue focus:border-accentBlue"
                   />
                 </div>
               </div>
 
               {/* Tags */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-textSecondary mb-2">
                   Tags
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {availableTags.map(tag => (
-                    <button
+                    <TagBadge 
                       key={tag}
-                      onClick={() => toggleTag(tag)}
-                      className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                        selectedTags.includes(tag)
-                          ? 'bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-300'
-                          : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                      }`}
+                      size="md"
+                      variant={selectedTags.includes(tag) ? 'blue' : 'gray'} 
+                      onClick={() => toggleTag(tag)} 
+                      className="cursor-pointer"
                     >
                       {tag}
-                    </button>
+                    </TagBadge>
                   ))}
                 </div>
               </div>
 
               {/* Model */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-textSecondary mb-2">
                   Model
                 </label>
                 <select
                   value={selectedModel || ''}
                   onChange={(e) => setSelectedModel(e.target.value || null)}
-                  className="w-full p-2 rounded-md bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="block w-full appearance-none bg-white border border-neutralGray text-textPrimary rounded-md px-3 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-accentBlue focus:border-accentBlue"
                 >
                   <option value="">All Models</option>
                   <option value="GPT-4">GPT-4</option>
@@ -187,13 +186,13 @@ export default function MyPrompts() {
 
               {/* Status */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-textSecondary mb-2">
                   Status
                 </label>
                 <select
                   value={selectedStatus || ''}
                   onChange={(e) => setSelectedStatus(e.target.value || null)}
-                  className="w-full p-2 rounded-md bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="block w-full appearance-none bg-white border border-neutralGray text-textPrimary rounded-md px-3 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-accentBlue focus:border-accentBlue"
                 >
                   <option value="">All Statuses</option>
                   <option value="active">Active</option>
@@ -226,65 +225,68 @@ export default function MyPrompts() {
             <div className="p-0">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-gray-200 dark:border-gray-700">
-                    <th className="text-left py-3 px-6 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Title</th>
-                    <th className="text-left py-3 px-6 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Model</th>
-                    <th className="text-left py-3 px-6 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                    <th className="text-left py-3 px-6 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Version</th>
-                    <th className="text-left py-3 px-6 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Modified</th>
-                    <th className="text-right py-3 px-6 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                  <tr className="border-b border-neutralGray-light">
+                    <th className="text-left py-3 px-6 text-xs font-medium text-textSecondary uppercase tracking-wider">Title</th>
+                    <th className="text-left py-3 px-6 text-xs font-medium text-textSecondary uppercase tracking-wider">Model</th>
+                    <th className="text-left py-3 px-6 text-xs font-medium text-textSecondary uppercase tracking-wider">Status</th>
+                    <th className="text-left py-3 px-6 text-xs font-medium text-textSecondary uppercase tracking-wider">Version</th>
+                    <th className="text-left py-3 px-6 text-xs font-medium text-textSecondary uppercase tracking-wider">Modified</th>
+                    <th className="text-right py-3 px-6 text-xs font-medium text-textSecondary uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredPrompts.length > 0 ? (
                     filteredPrompts.map((prompt) => (
-                      <tr key={prompt.id} className="hover:bg-gray-50 dark:hover:bg-gray-850 border-b border-gray-200 dark:border-gray-700 last:border-0">
+                      <tr key={prompt.id} className="hover:bg-neutralGray-light/40 border-b border-neutralGray-light last:border-0">
                         <td className="py-4 px-6">
                           <div>
-                            <div className="font-medium text-gray-900 dark:text-white">
+                            <div className="font-medium text-textPrimary">
                               {prompt.title}
                             </div>
                             <div className="flex mt-1 space-x-1">
                               {prompt.tags.map((tag) => (
-                                <span key={tag} className="px-2 py-0.5 text-xs rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
+                                <TagBadge key={tag} variant="gray" size="sm">
                                   {tag}
-                                </span>
+                                </TagBadge>
                               ))}
                             </div>
                           </div>
                         </td>
-                        <td className="py-4 px-6 text-sm text-gray-500 dark:text-gray-400">
+                        <td className="py-4 px-6 text-sm text-textSecondary">
                           {prompt.model}
                         </td>
                         <td className="py-4 px-6">
-                          <span className={`px-2 py-1 text-xs rounded-full ${
-                            prompt.status === 'active' 
-                              ? 'bg-success-100 text-success-800 dark:bg-success-900/30 dark:text-success-400'
-                              : prompt.status === 'draft'
-                                ? 'bg-warning-100 text-warning-800 dark:bg-warning-900/30 dark:text-warning-400'
-                                : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400'
-                          }`}>
+                          <TagBadge 
+                            size="sm"
+                            variant={
+                              prompt.status === 'active' 
+                                ? 'green' 
+                                : prompt.status === 'draft' 
+                                  ? 'blue' 
+                                  : 'gray'
+                            }
+                          >
                             {prompt.status}
-                          </span>
+                          </TagBadge>
                         </td>
-                        <td className="py-4 px-6 text-sm text-gray-500 dark:text-gray-400">
+                        <td className="py-4 px-6 text-sm text-textSecondary">
                           v{prompt.version}
                         </td>
-                        <td className="py-4 px-6 text-sm text-gray-500 dark:text-gray-400">
+                        <td className="py-4 px-6 text-sm text-textSecondary">
                           {prompt.lastModified}
                         </td>
                         <td className="py-4 px-6 text-right">
                           <div className="flex justify-end space-x-2">
-                            <button className="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300" title="View">
+                            <button className="p-1 text-neutralGray-dark hover:text-accentBlue" title="View">
                               <Eye size={16} />
                             </button>
-                            <button className="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300" title="Edit">
+                            <button className="p-1 text-neutralGray-dark hover:text-accentBlue" title="Edit">
                               <Edit size={16} />
                             </button>
-                            <button className="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300" title="Duplicate">
+                            <button className="p-1 text-neutralGray-dark hover:text-accentBlue" title="Duplicate">
                               <Copy size={16} />
                             </button>
-                            <button className="p-1 text-error-500 hover:text-error-700 dark:text-error-400 dark:hover:text-error-300" title="Delete">
+                            <button className="p-1 text-accentRed hover:text-accentRed/80" title="Delete">
                               <Trash size={16} />
                             </button>
                           </div>
@@ -293,9 +295,9 @@ export default function MyPrompts() {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={6} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                      <td colSpan={6} className="py-8 text-center text-textSecondary">
                         <div className="flex flex-col items-center justify-center">
-                          <Search size={24} className="mb-2 text-gray-400" />
+                          <Search size={24} className="mb-2 text-neutralGray-medium" />
                           <p>No prompts found matching your filters</p>
                           <Button 
                             variant="ghost" 

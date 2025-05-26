@@ -15,6 +15,7 @@ import {
   GitBranch
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import TagBadge from '../components/common/TagBadge';
 
 export default function PromptDetail() {
   const navigate = useNavigate();
@@ -68,19 +69,15 @@ This will help me provide the most accurate assistance. I'm here to help in a pr
       <div className="flex items-center mb-6">
         <button 
           onClick={() => navigate('/prompts')} 
-          className="mr-3 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
+          className="mr-3 p-2 rounded-full text-textPrimary hover:bg-neutralGray-light/60"
         >
           <ArrowLeft size={20} />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Customer Support Assistant</h1>
+          <h1 className="text-2xl font-bold text-textPrimary">Customer Support Assistant</h1>
           <div className="flex mt-1 space-x-2">
-            <span className="px-2 py-0.5 text-xs rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
-              support
-            </span>
-            <span className="px-2 py-0.5 text-xs rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
-              gpt-4
-            </span>
+            <TagBadge variant="gray">support</TagBadge>
+            <TagBadge variant="gray">gpt-4</TagBadge>
           </div>
         </div>
       </div>
@@ -95,8 +92,8 @@ This will help me provide the most accurate assistance. I'm here to help in a pr
                   <button 
                     className={`flex items-center w-full px-4 py-3 text-left ${
                       activeTab === 'prompt' 
-                        ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border-l-2 border-primary-500' 
-                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+                        ? 'bg-accentBlue/10 text-accentBlue border-l-2 border-accentBlue' 
+                        : 'text-textSecondary hover:bg-neutralGray-light/60'
                     }`}
                     onClick={() => setActiveTab('prompt')}
                   >
@@ -108,8 +105,8 @@ This will help me provide the most accurate assistance. I'm here to help in a pr
                   <button 
                     className={`flex items-center w-full px-4 py-3 text-left ${
                       activeTab === 'metadata' 
-                        ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border-l-2 border-primary-500' 
-                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+                        ? 'bg-accentBlue/10 text-accentBlue border-l-2 border-accentBlue' 
+                        : 'text-textSecondary hover:bg-neutralGray-light/60'
                     }`}
                     onClick={() => setActiveTab('metadata')}
                   >
@@ -121,8 +118,8 @@ This will help me provide the most accurate assistance. I'm here to help in a pr
                   <button 
                     className={`flex items-center w-full px-4 py-3 text-left ${
                       activeTab === 'test' 
-                        ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border-l-2 border-primary-500' 
-                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+                        ? 'bg-accentBlue/10 text-accentBlue border-l-2 border-accentBlue' 
+                        : 'text-textSecondary hover:bg-neutralGray-light/60'
                     }`}
                     onClick={() => setActiveTab('test')}
                   >
@@ -134,8 +131,8 @@ This will help me provide the most accurate assistance. I'm here to help in a pr
                   <button 
                     className={`flex items-center w-full px-4 py-3 text-left ${
                       activeTab === 'versions' 
-                        ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border-l-2 border-primary-500' 
-                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+                        ? 'bg-accentBlue/10 text-accentBlue border-l-2 border-accentBlue' 
+                        : 'text-textSecondary hover:bg-neutralGray-light/60'
                     }`}
                     onClick={() => setActiveTab('versions')}
                   >
@@ -147,8 +144,8 @@ This will help me provide the most accurate assistance. I'm here to help in a pr
                   <button 
                     className={`flex items-center w-full px-4 py-3 text-left ${
                       activeTab === 'comments' 
-                        ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border-l-2 border-primary-500' 
-                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+                        ? 'bg-accentBlue/10 text-accentBlue border-l-2 border-accentBlue' 
+                        : 'text-textSecondary hover:bg-neutralGray-light/60'
                     }`}
                     onClick={() => setActiveTab('comments')}
                   >
@@ -164,7 +161,7 @@ This will help me provide the most accurate assistance. I'm here to help in a pr
         {/* Main Editor Area */}
         <div className="lg:col-span-2">
           <Card>
-            <CardHeader className="border-b border-gray-200 dark:border-gray-800">
+            <CardHeader className="border-b border-neutralGray-light">
               <div className="flex justify-between items-center">
                 <CardTitle>Prompt Editor</CardTitle>
                 <div className="flex space-x-2">
@@ -196,7 +193,7 @@ This will help me provide the most accurate assistance. I'm here to help in a pr
               <textarea
                 value={promptContent}
                 onChange={(e) => setPromptContent(e.target.value)}
-                className="w-full h-96 p-4 font-mono text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                className="w-full h-96 p-4 font-mono text-sm bg-white border border-neutralGray text-textPrimary placeholder-textSecondary rounded-md focus:outline-none focus:ring-2 focus:ring-accentBlue focus:border-accentBlue resize-none"
               />
             </CardContent>
           </Card>
@@ -213,13 +210,13 @@ This will help me provide the most accurate assistance. I'm here to help in a pr
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-textSecondary mb-1">
                   Model
                 </label>
                 <select
                   value={selectedModel}
                   onChange={(e) => setSelectedModel(e.target.value)}
-                  className="w-full p-2 rounded-md bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="block w-full appearance-none bg-white border border-neutralGray text-textPrimary rounded-md px-3 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-accentBlue focus:border-accentBlue"
                 >
                   <option value="gpt-4">GPT-4</option>
                   <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
@@ -229,7 +226,7 @@ This will help me provide the most accurate assistance. I'm here to help in a pr
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-textSecondary mb-1">
                   Temperature: {temperature}
                 </label>
                 <input
@@ -239,12 +236,12 @@ This will help me provide the most accurate assistance. I'm here to help in a pr
                   step="0.1"
                   value={temperature}
                   onChange={(e) => setTemperature(parseFloat(e.target.value))}
-                  className="w-full"
+                  className="w-full accent-accentBlue"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-textSecondary mb-1">
                   Max Tokens: {maxTokens}
                 </label>
                 <input
@@ -254,7 +251,7 @@ This will help me provide the most accurate assistance. I'm here to help in a pr
                   step="100"
                   value={maxTokens}
                   onChange={(e) => setMaxTokens(parseInt(e.target.value))}
-                  className="w-full"
+                  className="w-full accent-accentBlue"
                 />
               </div>
 
@@ -268,7 +265,7 @@ This will help me provide the most accurate assistance. I'm here to help in a pr
 
               <div className="mt-4">
                 <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-medium text-gray-900 dark:text-white">Output</h4>
+                  <h4 className="font-medium text-textPrimary">Output</h4>
                   {output && (
                     <Button 
                       variant="ghost" 
@@ -280,11 +277,11 @@ This will help me provide the most accurate assistance. I'm here to help in a pr
                     </Button>
                   )}
                 </div>
-                <div className="p-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md min-h-[200px] max-h-[400px] overflow-y-auto">
+                <div className="p-3 bg-neutralGray-light/40 border border-neutralGray-light rounded-md min-h-[200px] max-h-[400px] overflow-y-auto">
                   {output ? (
-                    <p className="whitespace-pre-line text-sm text-gray-800 dark:text-gray-200">{output}</p>
+                    <p className="whitespace-pre-line text-sm text-textPrimary">{output}</p>
                   ) : (
-                    <div className="flex flex-col items-center justify-center h-full text-center text-gray-500 dark:text-gray-400">
+                    <div className="flex flex-col items-center justify-center h-full text-center text-textSecondary">
                       <Lightbulb size={24} className="mb-2" />
                       <p>Test your prompt to see the output here</p>
                     </div>
