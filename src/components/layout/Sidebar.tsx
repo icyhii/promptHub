@@ -30,19 +30,19 @@ export default function Sidebar({ isSidebarOpen, toggleSidebar }: SidebarProps) 
 
   return (
     <div className={cn(
-      "fixed h-full bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 transition-all duration-300 z-10",
+      "fixed h-full bg-background border-r border-neutralGray-light transition-all duration-300 z-10",
       isSidebarOpen ? "w-64" : "w-16"
     )}>
-      <div className="flex justify-between items-center h-16 px-4 border-b border-gray-200 dark:border-gray-800">
+      <div className="flex justify-between items-center h-16 px-4 border-b border-neutralGray-light">
         <h1 className={cn(
-          "font-bold text-gray-900 dark:text-white transition-opacity duration-200",
+          "font-bold text-textPrimary transition-opacity duration-200",
           isSidebarOpen ? "opacity-100" : "opacity-0 hidden"
         )}>
           PromptHub
         </h1>
         <button 
           onClick={toggleSidebar}
-          className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          className="p-1.5 rounded-md hover:bg-neutralGray-light transition-colors"
           aria-label={isSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
         >
           {isSidebarOpen ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
@@ -56,8 +56,10 @@ export default function Sidebar({ isSidebarOpen, toggleSidebar }: SidebarProps) 
                 to={item.path}
                 className={({ isActive }) => cn(
                   "flex items-center px-3 py-2 rounded-md transition-colors",
-                  "hover:bg-gray-100 dark:hover:bg-gray-800",
-                  isActive ? "bg-primary-50 dark:bg-gray-800 text-primary-600 dark:text-primary-400" : "text-gray-700 dark:text-gray-300",
+                  "hover:bg-neutralGray-light", 
+                  isActive 
+                    ? "bg-neutralGray-light text-accentBlue" 
+                    : "text-textSecondary",
                   !isSidebarOpen && "justify-center"
                 )}
                 end
