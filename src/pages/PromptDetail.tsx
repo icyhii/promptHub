@@ -2,10 +2,32 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Button from '../components/common/Button';
 import TagBadge from '../components/common/TagBadge';
+import CollapsiblePanel from '../components/common/CollapsiblePanel';
 import { usePrompts } from '../hooks/usePrompts';
-import { ArrowLeft, Copy, MoreHorizontal } from 'lucide-react';
+import { ArrowLeft, Copy, MoreHorizontal, ChevronDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
+
+const modules = {
+  toolbar: [
+    [{ 'header': [1, 2, 3, 4, false] }],
+    ['bold', 'italic', 'underline'],
+    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+    ['link', 'code-block'],
+    [{ 'table': true }],
+    ['clean']
+  ]
+};
+
+const formats = [
+  'header',
+  'bold', 'italic', 'underline',
+  'list', 'bullet',
+  'link', 'code-block',
+  'table'
+];
 
 export default function PromptDetail() {
   const navigate = useNavigate();
@@ -17,6 +39,7 @@ export default function PromptDetail() {
   const [promptTags, setPromptTags] = useState<string[]>(['translation', 'example']);
   const [selectedModel] = useState('GPT-4');
   const [parallelText, setParallelText] = useState('Parallel text goes here');
+  const [allPanelsExpanded, setAllPanelsExpanded] = useState(true);
 
   const { prompts, createPrompt, updatePrompt } = usePrompts();
 
@@ -65,12 +88,10 @@ export default function PromptDetail() {
   };
 
   const handleDuplicate = () => {
-    // Implement duplicate functionality
     toast.success('Prompt duplicated');
   };
 
   const handleShare = () => {
-    // Implement share functionality
     toast.success('Share dialog opened');
   };
 
@@ -88,6 +109,13 @@ export default function PromptDetail() {
           <h1 className="text-xl font-semibold">Prompt Editor</h1>
         </div>
         <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            onClick={() => setAllPanelsExpanded(!allPanelsExpanded)}
+            leftIcon={<ChevronDown size={16} />}
+          >
+            {allPanelsExpanded ? 'Collapse All' : 'Expand All'}
+          </Button>
           <Button onClick={handleSave}>
             Save
           </Button>
@@ -115,36 +143,61 @@ export default function PromptDetail() {
             placeholder="Document title"
           />
 
-          <div className="mb-6">
-            <textarea
-              value={promptContent}
-              onChange={(e) => setPromptContent(e.target.value)}
-              className="w-full min-h-[100px] text-lg border-none focus:outline-none focus:ring-0 resize-none"
-              placeholder="Translate the following English text to French, and respond in the same language:"
-            />
-          </div>
+          <div className="space-y-6">
+            <CollapsiblePanel
+              title="Prompt Content"
+              panelKey="prompt-content"
+              isExpandedProp={allPanelsExpanded}
+              previewText={promptContent.substring(0, 100) + '...'}
+            >
+              <ReactQuill
+                value={promptContent}
+                onChange={setPromptContent}
+                modules={modules}
+                formats={formats}
+                className="h-[300px] mb-12"
+              />
+            </CollapsiblePanel>
 
-          <div className="bg-gray-50 p-4 rounded-lg mb-6 font-mono">
-            <div className="text-gray-600">
-              {`<What are some of the best things to see ad do in Paris?>`}
-            </div>
-          </div>
+            <CollapsiblePanel
+              title="Example Input"
+              panelKey="example-input"
+              isExpandedProp={allPanelsExpanded}
+            >
+              <div className="bg-gray-50 p-4 rounded-lg font-mono">
+                <div className="text-gray-600">
+                  {`<What are some of the best things to see ad do in Paris?>`}
+                </div>
+              </div>
+            </CollapsiblePanel>
 
-          <div className="flex items-center text-gray-500 mb-6">
-            <span className="mr-2">→</span>
-            <input
-              type="text"
-              value={parallelText}
-              onChange={(e) => setParallelText(e.target.value)}
-              className="flex-1 text-gray-500 border-none focus:outline-none focus:ring-0"
-              placeholder="Parallel text goes here"
-            />
-          </div>
+            <CollapsiblePanel
+              title="Parallel Text"
+              panelKey="parallel-text"
+              isExpandedProp={allPanelsExpanded}
+            >
+              <div className="flex items-center text-gray-500">
+                <span className="mr-2">→</span>
+                <input
+                  type="text"
+                  value={parallelText}
+                  onChange={(e) => setParallelText(e.target.value)}
+                  className="flex-1 text-gray-500 border-none focus:outline-none focus:ring-0"
+                  placeholder="Parallel text goes here"
+                />
+              </div>
+            </CollapsiblePanel>
 
-          <button className="flex items-center text-gray-600 px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50">
-            <span className="mr-2">≡</span>
-            Version history
-          </button>
+            <CollapsiblePanel
+              title="Version History"
+              panelKey="version-history"
+              isExpandedProp={allPanelsExpanded}
+            >
+              <div className="text-gray-600">
+                No previous versions
+              </div>
+            </CollapsiblePanel>
+          </div>
         </div>
 
         {/* Right Column */}
