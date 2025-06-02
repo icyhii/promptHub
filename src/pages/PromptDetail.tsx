@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Button from '../components/common/Button';
-import TagBadge from '../components/common/TagBadge';
+import TagInput from '../components/common/TagInput';
 import CollapsiblePanel from '../components/common/CollapsiblePanel';
 import { usePrompts } from '../hooks/usePrompts';
-import { ArrowLeft, Copy, MoreHorizontal, ChevronDown } from 'lucide-react';
+import { useAutosave, type SaveStatus } from '../hooks/useAutosave';
+import { ArrowLeft, Copy, MoreHorizontal, ChevronDown, Save, Check, AlertCircle, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import ReactQuill from 'react-quill';
@@ -29,6 +30,13 @@ const formats = [
   'table'
 ];
 
+const MODEL_TOKEN_LIMITS = {
+  'GPT-4': 8192,
+  'GPT-3.5': 4096,
+  'Claude-3': 100000,
+  'Gemini': 32768
+};
+
 export default function PromptDetail() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -36,12 +44,68 @@ export default function PromptDetail() {
   
   const [promptContent, setPromptContent] = useState('');
   const [promptTitle, setPromptTitle] = useState('Document title');
-  const [promptTags, setPromptTags] = useState<string[]>(['translation', 'example']);
-  const [selectedModel] = useState('GPT-4');
+  const [promptTags, setPromptTags] = useState<Array<{ id: string; text: string }>>([]);
+  const [selectedModel, setSelectedModel] = useState('GPT-4');
   const [parallelText, setParallelText] = useState('Parallel text goes here');
   const [allPanelsExpanded, setAllPanelsExpanded] = useState(true);
 
   const { prompts, createPrompt, updatePrompt } = usePrompts();
+
+  // Calculate token and character counts
+  const charCount = promptContent.length;
+  const wordCount = promptContent.trim().split(/\s+/).length;
+  const estimatedTokens = Math.ceil(wordCount * 1.3); // Rough estimation
+  const tokenLimit = MODEL_TOKEN_LIMITS[selectedModel as keyof typeof MODEL_TOKEN_LIMITS];
+
+  const handleSave = useCallback(async () => {
+    try {
+      const promptData = {
+        title: promptTitle,
+        body: promptContent,
+        tags: promptTags.map(tag => tag.text),
+        status: 'draft',
+        visibility: 'private',
+        metadata: {
+          model: selectedModel,
+          version: '1.0'
+        }
+      };
+
+      if (isNewPrompt) {
+        await createPrompt.mutateAsync(promptData);
+        toast.success('Prompt created successfully');
+        navigate('/prompts');
+      } else if (id) {
+        await updatePrompt.mutateAsync({
+          id,
+          ...promptData
+        });
+        toast.success('Prompt updated successfully');
+      }
+    } catch (error) {
+      toast.error(isNewPrompt ? 'Failed to create prompt' : 'Failed to update prompt');
+      throw error; // Re-throw for autosave handling
+    }
+  }, [promptTitle, promptContent, promptTags, selectedModel, id, isNewPrompt, createPrompt, updatePrompt, navigate]);
+
+  // Autosave functionality
+  const { saveStatus } = useAutosave({
+    data: { promptTitle, promptContent, promptTags, selectedModel },
+    onSave: handleSave
+  });
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        handleSave();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleSave]);
 
   useEffect(() => {
     if (!isNewPrompt && id) {
@@ -49,43 +113,10 @@ export default function PromptDetail() {
       if (prompt) {
         setPromptTitle(prompt.title);
         setPromptContent(prompt.body);
-        setPromptTags(prompt.tags);
+        setPromptTags(prompt.tags.map(tag => ({ id: tag, text: tag })));
       }
     }
   }, [id, prompts, isNewPrompt]);
-
-  const handleSave = async () => {
-    try {
-      if (isNewPrompt) {
-        await createPrompt.mutateAsync({
-          title: promptTitle,
-          body: promptContent,
-          tags: promptTags,
-          status: 'draft',
-          visibility: 'private',
-          metadata: {
-            model: selectedModel,
-            version: '1.0'
-          }
-        });
-        toast.success('Prompt created successfully');
-        navigate('/prompts');
-      } else if (id) {
-        await updatePrompt.mutateAsync({
-          id,
-          title: promptTitle,
-          body: promptContent,
-          tags: promptTags,
-          metadata: {
-            model: selectedModel
-          }
-        });
-        toast.success('Prompt updated successfully');
-      }
-    } catch (error) {
-      toast.error(isNewPrompt ? 'Failed to create prompt' : 'Failed to update prompt');
-    }
-  };
 
   const handleDuplicate = () => {
     toast.success('Prompt duplicated');
@@ -93,6 +124,32 @@ export default function PromptDetail() {
 
   const handleShare = () => {
     toast.success('Share dialog opened');
+  };
+
+  const getSaveStatusIcon = (status: SaveStatus) => {
+    switch (status) {
+      case 'saved':
+        return <Check size={16} className="text-green-500" />;
+      case 'saving':
+        return <Clock size={16} className="text-blue-500 animate-spin" />;
+      case 'error':
+        return <AlertCircle size={16} className="text-red-500" />;
+      case 'unsaved':
+        return <Save size={16} className="text-gray-500" />;
+    }
+  };
+
+  const getSaveStatusText = (status: SaveStatus) => {
+    switch (status) {
+      case 'saved':
+        return 'All changes saved';
+      case 'saving':
+        return 'Saving...';
+      case 'error':
+        return 'Error saving';
+      case 'unsaved':
+        return 'Unsaved changes';
+    }
   };
 
   return (
@@ -107,6 +164,10 @@ export default function PromptDetail() {
             <ArrowLeft size={20} />
           </button>
           <h1 className="text-xl font-semibold">Prompt Editor</h1>
+          <div className="ml-4 flex items-center text-sm text-gray-500">
+            {getSaveStatusIcon(saveStatus)}
+            <span className="ml-2">{getSaveStatusText(saveStatus)}</span>
+          </div>
         </div>
         <div className="flex items-center space-x-2">
           <Button
@@ -150,13 +211,25 @@ export default function PromptDetail() {
               isExpandedProp={allPanelsExpanded}
               previewText={promptContent.substring(0, 100) + '...'}
             >
-              <ReactQuill
-                value={promptContent}
-                onChange={setPromptContent}
-                modules={modules}
-                formats={formats}
-                className="h-[300px] mb-12"
-              />
+              <div className="space-y-4">
+                <ReactQuill
+                  value={promptContent}
+                  onChange={setPromptContent}
+                  modules={modules}
+                  formats={formats}
+                  className="h-[300px]"
+                />
+                <div className="flex items-center justify-between text-sm text-gray-500">
+                  <div>
+                    {charCount} characters • {wordCount} words
+                  </div>
+                  <div className={`flex items-center ${
+                    estimatedTokens > tokenLimit ? 'text-red-500' : ''
+                  }`}>
+                    {estimatedTokens} / {tokenLimit} tokens
+                  </div>
+                </div>
+              </div>
             </CollapsiblePanel>
 
             <CollapsiblePanel
@@ -205,16 +278,34 @@ export default function PromptDetail() {
           <div className="space-y-8">
             <div>
               <h2 className="text-lg font-semibold mb-3">Tags</h2>
-              <div className="flex flex-wrap gap-2">
-                {promptTags.map(tag => (
-                  <TagBadge key={tag} variant="gray">{tag}</TagBadge>
-                ))}
-              </div>
+              <TagInput
+                tags={promptTags}
+                suggestions={[
+                  { id: 'gpt4', text: 'gpt4' },
+                  { id: 'translation', text: 'translation' },
+                  { id: 'creative', text: 'creative' },
+                  { id: 'technical', text: 'technical' }
+                ]}
+                onAddTag={(tag) => setPromptTags([...promptTags, tag])}
+                onDeleteTag={(i) => {
+                  const newTags = [...promptTags];
+                  newTags.splice(i, 1);
+                  setPromptTags(newTags);
+                }}
+              />
             </div>
 
             <div>
               <h2 className="text-lg font-semibold mb-3">Model</h2>
-              <div className="text-gray-600">{selectedModel}</div>
+              <select
+                value={selectedModel}
+                onChange={(e) => setSelectedModel(e.target.value)}
+                className="w-full p-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {Object.keys(MODEL_TOKEN_LIMITS).map(model => (
+                  <option key={model} value={model}>{model}</option>
+                ))}
+              </select>
             </div>
 
             <div>
