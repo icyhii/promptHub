@@ -2,15 +2,53 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/common/Card';
 import Button from '../components/common/Button';
 import { BarChart, LineChart, Calendar, ArrowUp, ArrowDown, DollarSign, Clock, Zap, RefreshCw } from 'lucide-react';
+import { useAnalytics } from '../hooks/useAnalytics';
+import { ErrorBoundary } from 'react-error-boundary';
+import LoadingSpinner from '../components/common/LoadingSpinner';
 
-export default function Analytics() {
+function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) {
+  return (
+    <div className="text-center py-8">
+      <p className="text-error-600 mb-4">Error loading analytics data</p>
+      <Button onClick={resetErrorBoundary}>Try again</Button>
+    </div>
+  );
+}
+
+function AnalyticsContent() {
   const [dateRange, setDateRange] = useState('7d');
+  const { data: analytics, isLoading, error, refetch } = useAnalytics(
+    dateRange === '1d' ? 1 : 
+    dateRange === '7d' ? 7 : 
+    dateRange === '30d' ? 30 : 90
+  );
 
-  // Mock chart data
-  const chartData = {
-    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-    values: [320, 420, 380, 490, 550, 460, 520]
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
+
+  if (error) {
+    throw error;
+  }
+
+  const getChangeIndicator = (current: number, previous: number) => {
+    const percentChange = ((current - previous) / previous) * 100;
+    const isIncrease = percentChange > 0;
+    return {
+      value: Math.abs(percentChange).toFixed(0),
+      isIncrease,
+      text: isIncrease ? 'increase' : 'decrease'
+    };
   };
+
+  // Calculate changes based on historical data
+  const currentPeriod = analytics?.historicalData.slice(-7);
+  const previousPeriod = analytics?.historicalData.slice(-14, -7);
+  
+  const usageChange = getChangeIndicator(
+    currentPeriod?.reduce((sum, day) => sum + day.usage, 0) || 0,
+    previousPeriod?.reduce((sum, day) => sum + day.usage, 0) || 0
+  );
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -27,7 +65,11 @@ export default function Analytics() {
             <option value="30d">Last 30 days</option>
             <option value="90d">Last 90 days</option>
           </select>
-          <Button variant="outline" leftIcon={<RefreshCw size={16} />}>
+          <Button 
+            variant="outline" 
+            leftIcon={<RefreshCw size={16} />}
+            onClick={() => refetch()}
+          >
             Refresh
           </Button>
         </div>
@@ -40,16 +82,20 @@ export default function Analytics() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Usage</p>
-                <p className="text-3xl font-bold mt-1 text-gray-900 dark:text-white">8,429</p>
+                <p className="text-3xl font-bold mt-1 text-gray-900 dark:text-white">
+                  {analytics?.totalUsage.toLocaleString()}
+                </p>
               </div>
               <div className="p-3 bg-primary-100 dark:bg-primary-900/30 rounded-full text-primary-600 dark:text-primary-400">
                 <BarChart size={20} />
               </div>
             </div>
             <div className="mt-4">
-              <div className="text-sm text-success-600 flex items-center">
-                <ArrowUp size={16} className="mr-1" />
-                <span>23% increase</span>
+              <div className={`text-sm flex items-center ${
+                usageChange.isIncrease ? 'text-success-600' : 'text-error-600'
+              }`}>
+                {usageChange.isIncrease ? <ArrowUp size={16} className="mr-1" /> : <ArrowDown size={16} className="mr-1" />}
+                <span>{usageChange.value}% {usageChange.text}</span>
               </div>
             </div>
           </CardContent>
@@ -60,14 +106,16 @@ export default function Analytics() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Tokens Used</p>
-                <p className="text-3xl font-bold mt-1 text-gray-900 dark:text-white">1.2M</p>
+                <p className="text-3xl font-bold mt-1 text-gray-900 dark:text-white">
+                  {(analytics?.tokensUsed / 1000).toFixed(1)}K
+                </p>
               </div>
               <div className="p-3 bg-accent-100 dark:bg-accent-900/30 rounded-full text-accent-600 dark:text-accent-400">
                 <Zap size={20} />
               </div>
             </div>
             <div className="mt-4">
-              <div className="text-sm text-error-600 flex items-center">
+              <div className="text-sm text-success-600 flex items-center">
                 <ArrowDown size={16} className="mr-1" />
                 <span>5% decrease</span>
               </div>
@@ -80,7 +128,9 @@ export default function Analytics() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Est. Cost</p>
-                <p className="text-3xl font-bold mt-1 text-gray-900 dark:text-white">$42.80</p>
+                <p className="text-3xl font-bold mt-1 text-gray-900 dark:text-white">
+                  ${analytics?.estimatedCost.toFixed(2)}
+                </p>
               </div>
               <div className="p-3 bg-success-100 dark:bg-success-900/30 rounded-full text-success-600 dark:text-success-400">
                 <DollarSign size={20} />
@@ -100,7 +150,9 @@ export default function Analytics() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Avg. Response Time</p>
-                <p className="text-3xl font-bold mt-1 text-gray-900 dark:text-white">1.8s</p>
+                <p className="text-3xl font-bold mt-1 text-gray-900 dark:text-white">
+                  {(analytics?.avgResponseTime / 1000).toFixed(1)}s
+                </p>
               </div>
               <div className="p-3 bg-warning-100 dark:bg-warning-900/30 rounded-full text-warning-600 dark:text-warning-400">
                 <Clock size={20} />
@@ -127,16 +179,18 @@ export default function Analytics() {
           </CardHeader>
           <CardContent>
             <div className="h-[300px] flex items-end justify-between mt-6 px-2">
-              {chartData.values.map((value, index) => (
+              {analytics?.historicalData.slice(-7).map((day, index) => (
                 <div key={index} className="w-full max-w-[40px] flex flex-col items-center">
                   <div className="relative w-full h-full">
                     <div 
                       className="w-10 bg-primary-500 dark:bg-primary-600 rounded-t-md transition-all duration-500 ease-in-out hover:bg-primary-400"
-                      style={{ height: `${(value / Math.max(...chartData.values)) * 200}px` }}
+                      style={{ 
+                        height: `${(day.usage / Math.max(...analytics.historicalData.map(d => d.usage))) * 200}px` 
+                      }}
                     ></div>
                   </div>
                   <span className="text-xs mt-2 text-gray-500 dark:text-gray-400">
-                    {chartData.labels[index]}
+                    {new Date(day.date).toLocaleDateString(undefined, { weekday: 'short' })}
                   </span>
                 </div>
               ))}
@@ -153,10 +207,8 @@ export default function Analytics() {
           </CardHeader>
           <CardContent>
             <div className="h-[300px] mt-6 px-2 relative">
-              {/* Line chart container */}
               <div className="absolute inset-0 flex items-center">
                 <svg className="w-full h-[200px]" viewBox="0 0 700 200">
-                  {/* Grid lines */}
                   {[0, 1, 2, 3, 4].map((line) => (
                     <line 
                       key={line}
@@ -170,38 +222,41 @@ export default function Analytics() {
                     />
                   ))}
                   
-                  {/* Line chart */}
-                  <polyline
-                    fill="none"
-                    stroke="#3b82f6"
-                    strokeWidth="3"
-                    points={`0,${200 - (chartData.values[0] / Math.max(...chartData.values)) * 200} 
-                             100,${200 - (chartData.values[1] / Math.max(...chartData.values)) * 200} 
-                             200,${200 - (chartData.values[2] / Math.max(...chartData.values)) * 200} 
-                             300,${200 - (chartData.values[3] / Math.max(...chartData.values)) * 200} 
-                             400,${200 - (chartData.values[4] / Math.max(...chartData.values)) * 200} 
-                             500,${200 - (chartData.values[5] / Math.max(...chartData.values)) * 200} 
-                             600,${200 - (chartData.values[6] / Math.max(...chartData.values)) * 200}`}
-                  />
-                  
-                  {/* Data points */}
-                  {chartData.values.map((value, index) => (
-                    <circle
-                      key={index}
-                      cx={index * 100}
-                      cy={200 - (value / Math.max(...chartData.values)) * 200}
-                      r="4"
-                      fill="#3b82f6"
+                  {analytics && (
+                    <polyline
+                      fill="none"
+                      stroke="#3b82f6"
+                      strokeWidth="3"
+                      points={analytics.historicalData.slice(-7).map((day, index) => {
+                        const x = index * (700 / 6);
+                        const maxTokens = Math.max(...analytics.historicalData.map(d => d.tokens));
+                        const y = 200 - (day.tokens / maxTokens * 200);
+                        return `${x},${y}`;
+                      }).join(' ')}
                     />
-                  ))}
+                  )}
+                  
+                  {analytics?.historicalData.slice(-7).map((day, index) => {
+                    const x = index * (700 / 6);
+                    const maxTokens = Math.max(...analytics.historicalData.map(d => d.tokens));
+                    const y = 200 - (day.tokens / maxTokens * 200);
+                    return (
+                      <circle
+                        key={index}
+                        cx={x}
+                        cy={y}
+                        r="4"
+                        fill="#3b82f6"
+                      />
+                    );
+                  })}
                 </svg>
               </div>
               
-              {/* X-axis labels */}
               <div className="absolute bottom-0 inset-x-0 flex justify-between px-2">
-                {chartData.labels.map((label, index) => (
+                {analytics?.historicalData.slice(-7).map((day, index) => (
                   <span key={index} className="text-xs text-gray-500 dark:text-gray-400">
-                    {label}
+                    {new Date(day.date).toLocaleDateString(undefined, { weekday: 'short' })}
                   </span>
                 ))}
               </div>
@@ -210,132 +265,55 @@ export default function Analytics() {
         </Card>
       </div>
 
-      {/* Model Performance & Breakdown */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Model Performance</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-700">
-                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Model</th>
-                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Usage</th>
-                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tokens</th>
-                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Avg. Time</th>
-                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cost</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-b border-gray-200 dark:border-gray-700">
+      {/* Model Performance */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Model Performance</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-200 dark:border-gray-700">
+                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Model</th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Usage</th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tokens</th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Avg. Time</th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cost</th>
+              </tr>
+            </thead>
+            <tbody>
+              {analytics?.modelPerformance.map((model) => (
+                <tr key={model.model} className="border-b border-gray-200 dark:border-gray-700">
                   <td className="py-3 px-4">
-                    <span className="font-medium text-gray-900 dark:text-white">GPT-4</span>
+                    <span className="font-medium text-gray-900 dark:text-white">{model.model}</span>
                   </td>
-                  <td className="py-3 px-4 text-gray-500 dark:text-gray-400">5,248</td>
-                  <td className="py-3 px-4 text-gray-500 dark:text-gray-400">782K</td>
-                  <td className="py-3 px-4 text-gray-500 dark:text-gray-400">2.1s</td>
-                  <td className="py-3 px-4 text-gray-500 dark:text-gray-400">$32.40</td>
-                </tr>
-                <tr className="border-b border-gray-200 dark:border-gray-700">
-                  <td className="py-3 px-4">
-                    <span className="font-medium text-gray-900 dark:text-white">Claude-3</span>
+                  <td className="py-3 px-4 text-gray-500 dark:text-gray-400">{model.usage}</td>
+                  <td className="py-3 px-4 text-gray-500 dark:text-gray-400">
+                    {(model.tokens / 1000).toFixed(1)}K
                   </td>
-                  <td className="py-3 px-4 text-gray-500 dark:text-gray-400">2,350</td>
-                  <td className="py-3 px-4 text-gray-500 dark:text-gray-400">320K</td>
-                  <td className="py-3 px-4 text-gray-500 dark:text-gray-400">1.5s</td>
-                  <td className="py-3 px-4 text-gray-500 dark:text-gray-400">$8.20</td>
-                </tr>
-                <tr className="border-b border-gray-200 dark:border-gray-700">
-                  <td className="py-3 px-4">
-                    <span className="font-medium text-gray-900 dark:text-white">Gemini</span>
+                  <td className="py-3 px-4 text-gray-500 dark:text-gray-400">
+                    {(model.avgTime / 1000).toFixed(1)}s
                   </td>
-                  <td className="py-3 px-4 text-gray-500 dark:text-gray-400">831</td>
-                  <td className="py-3 px-4 text-gray-500 dark:text-gray-400">98K</td>
-                  <td className="py-3 px-4 text-gray-500 dark:text-gray-400">1.8s</td>
-                  <td className="py-3 px-4 text-gray-500 dark:text-gray-400">$2.20</td>
+                  <td className="py-3 px-4 text-gray-500 dark:text-gray-400">
+                    ${model.cost.toFixed(2)}
+                  </td>
                 </tr>
-              </tbody>
-            </table>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Usage Breakdown</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[250px] relative flex items-center justify-center">
-              {/* Simple pie chart */}
-              <svg className="w-[200px] h-[200px]" viewBox="0 0 100 100">
-                {/* GPT-4 slice (62%) */}
-                <circle 
-                  cx="50" 
-                  cy="50" 
-                  r="40" 
-                  fill="transparent"
-                  stroke="#3b82f6" 
-                  strokeWidth="20" 
-                  strokeDasharray={`${0.62 * 251.2} ${251.2}`} 
-                  transform="rotate(-90 50 50)" 
-                />
-                
-                {/* Claude-3 slice (28%) */}
-                <circle 
-                  cx="50" 
-                  cy="50" 
-                  r="40" 
-                  fill="transparent" 
-                  stroke="#8b5cf6" 
-                  strokeWidth="20" 
-                  strokeDasharray={`${0.28 * 251.2} ${251.2}`} 
-                  strokeDashoffset={`${-0.62 * 251.2}`} 
-                  transform="rotate(-90 50 50)" 
-                />
-                
-                {/* Gemini slice (10%) */}
-                <circle 
-                  cx="50" 
-                  cy="50" 
-                  r="40" 
-                  fill="transparent" 
-                  stroke="#10b981" 
-                  strokeWidth="20" 
-                  strokeDasharray={`${0.10 * 251.2} ${251.2}`} 
-                  strokeDashoffset={`${-(0.62 + 0.28) * 251.2}`} 
-                  transform="rotate(-90 50 50)" 
-                />
-              </svg>
-            </div>
-            
-            <div className="space-y-2 mt-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <div className="w-3 h-3 bg-primary-500 rounded-full mr-2"></div>
-                  <span className="text-sm text-gray-700 dark:text-gray-300">GPT-4</span>
-                </div>
-                <span className="text-sm font-medium text-gray-900 dark:text-white">62%</span>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <div className="w-3 h-3 bg-accent-500 rounded-full mr-2"></div>
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Claude-3</span>
-                </div>
-                <span className="text-sm font-medium text-gray-900 dark:text-white">28%</span>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <div className="w-3 h-3 bg-success-500 rounded-full mr-2"></div>
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Gemini</span>
-                </div>
-                <span className="text-sm font-medium text-gray-900 dark:text-white">10%</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+              ))}
+            </tbody>
+          </table>
+        </CardContent>
+      </Card>
     </div>
+  );
+}
+
+export default function Analytics() {
+  return (
+    <ErrorBoundary
+      FallbackComponent={ErrorFallback}
+      onReset={() => window.location.reload()}
+    >
+      <AnalyticsContent />
+    </ErrorBoundary>
   );
 }
