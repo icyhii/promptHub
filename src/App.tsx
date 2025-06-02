@@ -28,6 +28,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/prompts" element={<MyPrompts />} />
+          <Route path="/prompts/new" element={<PromptDetail />} />
           <Route path="/prompts/:id" element={<PromptDetail />} />
           <Route path="/teams" element={<Teams />} />
           <Route path="/community" element={<CommunityLibrary />} />

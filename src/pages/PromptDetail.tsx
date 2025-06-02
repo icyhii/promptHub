@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/common/Card';
 import Button from '../components/common/Button';
 import { 
@@ -14,40 +15,71 @@ import {
   Copy, 
   GitBranch
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import TagBadge from '../components/common/TagBadge';
+import { usePrompts } from '../hooks/usePrompts';
+import toast from 'react-hot-toast';
 
 export default function PromptDetail() {
   const navigate = useNavigate();
+  const { id } = useParams();
+  const isNewPrompt = !id;
   const [activeTab, setActiveTab] = useState('prompt');
-  const [promptContent, setPromptContent] = useState(
-    `You are a helpful customer support assistant for a software company.
-
-Your tasks:
-1. Answer questions about our product features
-2. Provide troubleshooting steps
-3. Escalate complex issues to human support
-4. Be polite and professional at all times
-
-When helping with troubleshooting, follow these steps:
-- Ask for specific error messages
-- Check if they've tried restarting
-- Verify their software version
-- Provide clear step-by-step instructions
-
-DO NOT:
-- Share internal company information
-- Make promises about future features
-- Process refunds or billing issues`
-  );
-
+  const [promptContent, setPromptContent] = useState('');
+  const [promptTitle, setPromptTitle] = useState('');
+  const [promptTags, setPromptTags] = useState<string[]>([]);
   const [selectedModel, setSelectedModel] = useState('gpt-4');
   const [temperature, setTemperature] = useState(0.7);
   const [maxTokens, setMaxTokens] = useState(500);
   const [output, setOutput] = useState('');
 
+  const { prompts, createPrompt, updatePrompt } = usePrompts();
+
+  useEffect(() => {
+    if (!isNewPrompt && id) {
+      const prompt = prompts?.find(p => p.id === id);
+      if (prompt) {
+        setPromptTitle(prompt.title);
+        setPromptContent(prompt.body);
+        setPromptTags(prompt.tags);
+        setSelectedModel(prompt.metadata?.model || 'gpt-4');
+      }
+    }
+  }, [id, prompts, isNewPrompt]);
+
+  const handleSave = async () => {
+    try {
+      if (isNewPrompt) {
+        await createPrompt.mutateAsync({
+          title: promptTitle,
+          body: promptContent,
+          tags: promptTags,
+          status: 'draft',
+          visibility: 'private',
+          metadata: {
+            model: selectedModel,
+            version: '1.0'
+          }
+        });
+        toast.success('Prompt created successfully');
+        navigate('/prompts');
+      } else if (id) {
+        await updatePrompt.mutateAsync({
+          id,
+          title: promptTitle,
+          body: promptContent,
+          tags: promptTags,
+          metadata: {
+            model: selectedModel
+          }
+        });
+        toast.success('Prompt updated successfully');
+      }
+    } catch (error) {
+      toast.error(isNewPrompt ? 'Failed to create prompt' : 'Failed to update prompt');
+    }
+  };
+
   const handleTestPrompt = () => {
-    // Simulate API response with a delayed response
     setOutput('Processing...');
     
     setTimeout(() => {
@@ -73,11 +105,29 @@ This will help me provide the most accurate assistance. I'm here to help in a pr
         >
           <ArrowLeft size={20} />
         </button>
-        <div>
-          <h1 className="text-2xl font-bold text-textPrimary">Customer Support Assistant</h1>
+        <div className="flex-1">
+          <input
+            type="text"
+            value={promptTitle}
+            onChange={(e) => setPromptTitle(e.target.value)}
+            placeholder="Enter prompt title..."
+            className="text-2xl font-bold text-textPrimary bg-transparent border-0 focus:outline-none focus:ring-0 w-full"
+          />
           <div className="flex mt-1 space-x-2">
-            <TagBadge variant="gray">support</TagBadge>
-            <TagBadge variant="gray">gpt-4</TagBadge>
+            {promptTags.map((tag) => (
+              <TagBadge key={tag} variant="gray">{tag}</TagBadge>
+            ))}
+            <button 
+              className="text-sm text-textSecondary hover:text-textPrimary"
+              onClick={() => {
+                const tag = prompt('Enter new tag:');
+                if (tag && !promptTags.includes(tag)) {
+                  setPromptTags([...promptTags, tag]);
+                }
+              }}
+            >
+              + Add Tag
+            </button>
           </div>
         </div>
       </div>
@@ -169,7 +219,10 @@ This will help me provide the most accurate assistance. I'm here to help in a pr
                     variant="outline" 
                     size="sm" 
                     leftIcon={<Copy size={14} />}
-                    onClick={() => navigator.clipboard.writeText(promptContent)}
+                    onClick={() => {
+                      navigator.clipboard.writeText(promptContent);
+                      toast.success('Copied to clipboard');
+                    }}
                   >
                     Copy
                   </Button>
@@ -183,6 +236,7 @@ This will help me provide the most accurate assistance. I'm here to help in a pr
                   <Button 
                     size="sm" 
                     leftIcon={<Save size={14} />}
+                    onClick={handleSave}
                   >
                     Save
                   </Button>
@@ -193,6 +247,7 @@ This will help me provide the most accurate assistance. I'm here to help in a pr
               <textarea
                 value={promptContent}
                 onChange={(e) => setPromptContent(e.target.value)}
+                placeholder={isNewPrompt ? "Enter your prompt here..." : ""}
                 className="w-full h-96 p-4 font-mono text-sm bg-white border border-neutralGray text-textPrimary placeholder-textSecondary rounded-md focus:outline-none focus:ring-2 focus:ring-accentBlue focus:border-accentBlue resize-none"
               />
             </CardContent>
@@ -271,7 +326,10 @@ This will help me provide the most accurate assistance. I'm here to help in a pr
                       variant="ghost" 
                       size="sm" 
                       leftIcon={<Copy size={14} />}
-                      onClick={() => navigator.clipboard.writeText(output)}
+                      onClick={() => {
+                        navigator.clipboard.writeText(output);
+                        toast.success('Copied to clipboard');
+                      }}
                     >
                       Copy
                     </Button>

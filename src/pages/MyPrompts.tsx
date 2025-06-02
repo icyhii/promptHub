@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/common/Card';
 import Button from '../components/common/Button';
 import TagBadge from '../components/common/TagBadge';
@@ -8,7 +9,6 @@ import { usePrompts } from '../hooks/usePrompts';
 import { ErrorBoundary } from 'react-error-boundary';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import toast from 'react-hot-toast';
-import { formatDistanceToNow } from 'date-fns';
 
 function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) {
   return (
@@ -20,6 +20,7 @@ function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetError
 }
 
 function MyPromptsContent() {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
@@ -37,6 +38,10 @@ function MyPromptsContent() {
     tags: selectedTags.length > 0 ? selectedTags : undefined,
     search: searchTerm || undefined
   });
+
+  const handleCreatePrompt = () => {
+    navigate('/prompts/new');
+  };
 
   const availableTags = Array.from(
     new Set(prompts?.flatMap(prompt => prompt.tags) || [])
@@ -89,7 +94,7 @@ function MyPromptsContent() {
           <div className="flex space-x-3">
             <Button variant="outline" leftIcon={<UploadCloud size={16} />}>Import</Button>
             <Button variant="outline" leftIcon={<Download size={16} />}>Export</Button>
-            <Button leftIcon={<Plus size={16} />}>New Prompt</Button>
+            <Button leftIcon={<Plus size={16} />} onClick={handleCreatePrompt}>New Prompt</Button>
           </div>
         </div>
 
@@ -99,7 +104,7 @@ function MyPromptsContent() {
           description="Start building your prompt library by creating a new prompt or importing existing ones."
           primaryAction={{
             label: "Create New Prompt",
-            onClick: () => {/* handle create */},
+            onClick: handleCreatePrompt,
             icon: <Plus size={16} />
           }}
           secondaryAction={{
@@ -139,7 +144,7 @@ function MyPromptsContent() {
           <div className="flex space-x-3">
             <Button variant="outline" leftIcon={<UploadCloud size={16} />}>Import</Button>
             <Button variant="outline" leftIcon={<Download size={16} />}>Export</Button>
-            <Button leftIcon={<Plus size={16} />}>New Prompt</Button>
+            <Button leftIcon={<Plus size={16} />} onClick={handleCreatePrompt}>New Prompt</Button>
           </div>
         </div>
         
@@ -272,7 +277,7 @@ function MyPromptsContent() {
         <div className="flex space-x-3">
           <Button variant="outline" leftIcon={<UploadCloud size={16} />}>Import</Button>
           <Button variant="outline" leftIcon={<Download size={16} />}>Export</Button>
-          <Button leftIcon={<Plus size={16} />}>New Prompt</Button>
+          <Button leftIcon={<Plus size={16} />} onClick={handleCreatePrompt}>New Prompt</Button>
         </div>
       </div>
 
@@ -431,14 +436,14 @@ function MyPromptsContent() {
                             <button 
                               className="p-1 text-neutralGray-dark hover:text-accentBlue" 
                               title="View"
-                              onClick={() => window.location.href = `/prompts/${prompt.id}`}
+                              onClick={() => navigate(`/prompts/${prompt.id}`)}
                             >
                               <Eye size={16} />
                             </button>
                             <button 
                               className="p-1 text-neutralGray-dark hover:text-accentBlue" 
                               title="Edit"
-                              onClick={() => window.location.href = `/prompts/${prompt.id}/edit`}
+                              onClick={() => navigate(`/prompts/${prompt.id}`)}
                             >
                               <Edit size={16} />
                             </button>
