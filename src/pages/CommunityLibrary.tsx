@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/common/Card';
 import Button from '../components/common/Button';
 import TagBadge from '../components/common/TagBadge';
-import { Search, Filter, Star, Copy, MessageCircle, Tag, ThumbsUp, Download } from 'lucide-react';
+import EmptyState from '../components/common/EmptyState';
+import { Search, Filter, Star, Copy, MessageCircle, Tag, ThumbsUp, Download, Compass, Upload } from 'lucide-react';
 
 export default function CommunityLibrary() {
   // Mock data for community prompts
@@ -127,6 +128,134 @@ export default function CommunityLibrary() {
   });
 
   const [selectedPrompt, setSelectedPrompt] = useState<number | null>(null);
+
+  // Show no results state when filters return empty
+  if (sortedPrompts.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-bold text-textPrimary">Community Library</h1>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Filters Sidebar */}
+          <div className="lg:col-span-1">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Filter size={16} className="mr-2" />
+                  Filters
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Categories */}
+                <div>
+                  <h3 className="font-medium text-textPrimary mb-2">Categories</h3>
+                  <div className="space-y-2">
+                    {categories.map(category => (
+                      <button
+                        key={category.id}
+                        className={`flex items-center justify-between w-full px-3 py-2 rounded-md text-left text-sm ${
+                          selectedCategory === category.id
+                            ? 'bg-accentBlue/20 text-accentBlue'
+                            : 'hover:bg-neutralGray-light/60 text-textSecondary'
+                        }`}
+                        onClick={() => setSelectedCategory(selectedCategory === category.id ? null : category.id)}
+                      >
+                        <span>{category.name}</span>
+                        <span className="text-xs text-textSecondary">{category.count}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Models */}
+                <div>
+                  <h3 className="font-medium text-textPrimary mb-2">Models</h3>
+                  <div className="space-y-2">
+                    {models.map(model => (
+                      <button
+                        key={model.id}
+                        className={`flex items-center justify-between w-full px-3 py-2 rounded-md text-left text-sm ${
+                          selectedModel === model.id
+                            ? 'bg-accentBlue/20 text-accentBlue'
+                            : 'hover:bg-neutralGray-light/60 text-textSecondary'
+                        }`}
+                        onClick={() => setSelectedModel(selectedModel === model.id ? null : model.id)}
+                      >
+                        <span>{model.name}</span>
+                        <span className="text-xs text-textSecondary">{model.count}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Sort Order */}
+                <div>
+                  <h3 className="font-medium text-textPrimary mb-2">Sort By</h3>
+                  <select
+                    value={selectedSort}
+                    onChange={(e) => setSelectedSort(e.target.value)}
+                    className="block w-full appearance-none bg-white border border-neutralGray text-textPrimary rounded-md px-3 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-accentBlue focus:border-accentBlue"
+                  >
+                    <option value="popular">Most Popular</option>
+                    <option value="rating">Highest Rated</option>
+                    <option value="recent">Most Recent</option>
+                  </select>
+                </div>
+
+                {/* Reset Filters */}
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full"
+                  onClick={() => {
+                    setSearchTerm('');
+                    setSelectedCategory(null);
+                    setSelectedModel(null);
+                    setSelectedSort('popular');
+                  }}
+                >
+                  Reset Filters
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+          
+          <div className="lg:col-span-3">
+            <EmptyState
+              icon={<Compass size={32} />}
+              title="No Prompts Found"
+              description={
+                searchTerm
+                  ? "No prompts match your current search and filters. Try adjusting your criteria."
+                  : "Be the first to share a prompt with the community!"
+              }
+              primaryAction={{
+                label: searchTerm ? "Clear Filters" : "Share a Prompt",
+                onClick: () => {
+                  if (searchTerm) {
+                    setSearchTerm('');
+                    setSelectedCategory(null);
+                    setSelectedModel(null);
+                    setSelectedSort('popular');
+                  } else {
+                    // Handle share prompt action
+                  }
+                },
+                icon: searchTerm ? <Filter size={16} /> : <Upload size={16} />
+              }}
+              tips={[
+                "Browse different categories",
+                "Try broader search terms",
+                "Check out featured prompts"
+              ]}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -277,27 +406,6 @@ export default function CommunityLibrary() {
               </Card>
             ))}
           </div>
-          
-          {sortedPrompts.length === 0 && (
-            <div className="bg-white rounded-lg shadow p-8 text-center text-textPrimary">
-              <Search size={40} className="mx-auto mb-4 text-neutralGray-medium" />
-              <h3 className="text-lg font-medium text-textPrimary mb-1">No prompts found</h3>
-              <p className="text-textSecondary mb-4">
-                Try adjusting your search or filters to find what you're looking for.
-              </p>
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setSearchTerm('');
-                  setSelectedCategory(null);
-                  setSelectedModel(null);
-                  setSelectedSort('popular');
-                }}
-              >
-                Clear filters
-              </Button>
-            </div>
-          )}
         </div>
       </div>
       
