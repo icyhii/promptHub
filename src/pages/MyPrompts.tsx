@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/common/Card';
 import Button from '../components/common/Button';
 import TagBadge from '../components/common/TagBadge';
-import { Plus, Filter, Download, UploadCloud, Tag, Search, Edit, Trash, Copy, Eye } from 'lucide-react';
+import EmptyState from '../components/common/EmptyState';
+import { Plus, Filter, Download, UploadCloud, Tag, Search, Edit, Trash, Copy, Eye, FileText } from 'lucide-react';
 import { usePrompts } from '../hooks/usePrompts';
 import { ErrorBoundary } from 'react-error-boundary';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -37,12 +38,10 @@ function MyPromptsContent() {
     search: searchTerm || undefined
   });
 
-  // Extract unique tags from all prompts
   const availableTags = Array.from(
     new Set(prompts?.flatMap(prompt => prompt.tags) || [])
   ).sort();
 
-  // Toggle tag selection
   const toggleTag = (tag: string) => {
     if (selectedTags.includes(tag)) {
       setSelectedTags(selectedTags.filter(t => t !== tag));
@@ -82,24 +81,189 @@ function MyPromptsContent() {
     throw error;
   }
 
-  // Filter prompts based on search and filters
+  if (!prompts || prompts.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-bold text-textPrimary">My Prompts</h1>
+          <div className="flex space-x-3">
+            <Button variant="outline" leftIcon={<UploadCloud size={16} />}>Import</Button>
+            <Button variant="outline" leftIcon={<Download size={16} />}>Export</Button>
+            <Button leftIcon={<Plus size={16} />}>New Prompt</Button>
+          </div>
+        </div>
+
+        <EmptyState
+          icon={<FileText size={32} />}
+          title="Create Your First Prompt"
+          description="Start building your prompt library by creating a new prompt or importing existing ones."
+          primaryAction={{
+            label: "Create New Prompt",
+            onClick: () => {/* handle create */},
+            icon: <Plus size={16} />
+          }}
+          secondaryAction={{
+            label: "Import Prompts",
+            onClick: () => {/* handle import */},
+            icon: <UploadCloud size={16} />
+          }}
+          tips={[
+            "Use templates to get started quickly",
+            "Organize prompts with tags for easy access",
+            "Share prompts with your team for collaboration"
+          ]}
+        />
+      </div>
+    );
+  }
+
   const filteredPrompts = prompts?.filter(prompt => {
-    // Search term filter
     const matchesSearch = searchTerm === '' || 
       prompt.title.toLowerCase().includes(searchTerm.toLowerCase());
     
-    // Tags filter
     const matchesTags = selectedTags.length === 0 || 
       selectedTags.some(tag => prompt.tags.includes(tag));
     
-    // Model filter
     const matchesModel = !selectedModel || prompt.metadata?.model === selectedModel;
     
-    // Status filter
     const matchesStatus = !selectedStatus || prompt.status === selectedStatus;
     
     return matchesSearch && matchesTags && matchesModel && matchesStatus;
   });
+
+  if (filteredPrompts && filteredPrompts.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-bold text-textPrimary">My Prompts</h1>
+          <div className="flex space-x-3">
+            <Button variant="outline" leftIcon={<UploadCloud size={16} />}>Import</Button>
+            <Button variant="outline" leftIcon={<Download size={16} />}>Export</Button>
+            <Button leftIcon={<Plus size={16} />}>New Prompt</Button>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          <div className="lg:col-span-1">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Filter size={16} className="mr-2" />
+                  Filters
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div>
+                  <label htmlFor="search" className="block text-sm font-medium text-textSecondary mb-1">
+                    Search
+                  </label>
+                  <div className="relative">
+                    <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutralGray-medium" />
+                    <input
+                      id="search"
+                      type="text"
+                      placeholder="Search prompts..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 rounded-md bg-white border border-neutralGray text-textPrimary placeholder-textSecondary focus:outline-none focus:ring-2 focus:ring-accentBlue focus:border-accentBlue"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-textSecondary mb-2">
+                    Tags
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {availableTags.map(tag => (
+                      <TagBadge 
+                        key={tag}
+                        size="md"
+                        variant={selectedTags.includes(tag) ? 'blue' : 'gray'} 
+                        onClick={() => toggleTag(tag)} 
+                        className="cursor-pointer"
+                      >
+                        {tag}
+                      </TagBadge>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-textSecondary mb-2">
+                    Model
+                  </label>
+                  <select
+                    value={selectedModel || ''}
+                    onChange={(e) => setSelectedModel(e.target.value || null)}
+                    className="block w-full appearance-none bg-white border border-neutralGray text-textPrimary rounded-md px-3 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-accentBlue focus:border-accentBlue"
+                  >
+                    <option value="">All Models</option>
+                    <option value="GPT-4">GPT-4</option>
+                    <option value="Claude-3">Claude-3</option>
+                    <option value="Gemini">Gemini</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-textSecondary mb-2">
+                    Status
+                  </label>
+                  <select
+                    value={selectedStatus || ''}
+                    onChange={(e) => setSelectedStatus(e.target.value || null)}
+                    className="block w-full appearance-none bg-white border border-neutralGray text-textPrimary rounded-md px-3 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-accentBlue focus:border-accentBlue"
+                  >
+                    <option value="">All Statuses</option>
+                    <option value="active">Active</option>
+                    <option value="draft">Draft</option>
+                    <option value="deprecated">Deprecated</option>
+                  </select>
+                </div>
+
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full"
+                  onClick={() => {
+                    setSearchTerm('');
+                    setSelectedTags([]);
+                    setSelectedModel(null);
+                    setSelectedStatus(null);
+                  }}
+                >
+                  Reset Filters
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+          
+          <div className="lg:col-span-3">
+            <EmptyState
+              icon={<Search size={32} />}
+              title="No Matching Prompts"
+              description="Try adjusting your search terms or filters to find what you're looking for."
+              primaryAction={{
+                label: "Clear Filters",
+                onClick: () => {
+                  setSearchTerm('');
+                  setSelectedTags([]);
+                  setSelectedModel(null);
+                  setSelectedStatus(null);
+                },
+                icon: <Filter size={16} />
+              }}
+              tips={[
+                "Check for typos in your search",
+                "Try using fewer filters",
+                "Search by prompt title or content"
+              ]}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -113,7 +277,6 @@ function MyPromptsContent() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Sidebar Filters */}
         <div className="lg:col-span-1">
           <Card>
             <CardHeader>
@@ -123,7 +286,6 @@ function MyPromptsContent() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Search */}
               <div>
                 <label htmlFor="search" className="block text-sm font-medium text-textSecondary mb-1">
                   Search
@@ -141,7 +303,6 @@ function MyPromptsContent() {
                 </div>
               </div>
 
-              {/* Tags */}
               <div>
                 <label className="block text-sm font-medium text-textSecondary mb-2">
                   Tags
@@ -161,7 +322,6 @@ function MyPromptsContent() {
                 </div>
               </div>
 
-              {/* Model */}
               <div>
                 <label className="block text-sm font-medium text-textSecondary mb-2">
                   Model
@@ -178,7 +338,6 @@ function MyPromptsContent() {
                 </select>
               </div>
 
-              {/* Status */}
               <div>
                 <label className="block text-sm font-medium text-textSecondary mb-2">
                   Status
@@ -195,7 +354,6 @@ function MyPromptsContent() {
                 </select>
               </div>
 
-              {/* Reset Filters */}
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -213,7 +371,6 @@ function MyPromptsContent() {
           </Card>
         </div>
 
-        {/* Prompts List */}
         <div className="lg:col-span-3">
           <Card>
             <div className="p-0">
