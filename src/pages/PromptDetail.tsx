@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Button from '../components/common/Button';
 import TagInput from '../components/common/TagInput';
 import CollapsiblePanel from '../components/common/CollapsiblePanel';
-import LoadingSpinner from '../components/common/LoadingSpinner';
 import { usePrompts } from '../hooks/usePrompts';
 import { useAutosave, type SaveStatus } from '../hooks/useAutosave';
 import { ArrowLeft, Copy, MoreHorizontal, ChevronDown, Save, Check, AlertCircle, Clock } from 'lucide-react';
@@ -11,7 +10,6 @@ import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import { supabase } from '../lib/supabase';
 
 const modules = {
   toolbar: [
@@ -44,7 +42,6 @@ export default function PromptDetail() {
   const { id } = useParams();
   const isNewPrompt = !id;
   
-  const [isLoading, setIsLoading] = useState(true);
   const [promptContent, setPromptContent] = useState('');
   const [promptTitle, setPromptTitle] = useState('Document title');
   const [promptTags, setPromptTags] = useState<Array<{ id: string; text: string }>>([]);
@@ -54,27 +51,6 @@ export default function PromptDetail() {
 
   const { prompts, createPrompt, updatePrompt } = usePrompts();
 
-  // Check authentication status
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const { data: { user }, error } = await supabase.auth.getUser();
-        if (error || !user) {
-          toast.error('Please log in to manage prompts');
-          navigate('/');
-          return;
-        }
-        setIsLoading(false);
-      } catch (error) {
-        console.error('Auth check failed:', error);
-        toast.error('Authentication check failed');
-        navigate('/');
-      }
-    };
-
-    checkAuth();
-  }, [navigate]);
-
   // Calculate token and character counts
   const charCount = promptContent.length;
   const wordCount = promptContent.trim().split(/\s+/).length;
@@ -83,14 +59,6 @@ export default function PromptDetail() {
 
   const handleSave = useCallback(async () => {
     try {
-      // Check auth status before saving
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error('Please log in to save prompts');
-        navigate('/');
-        return;
-      }
-
       const promptData = {
         title: promptTitle,
         body: promptContent,
@@ -183,14 +151,6 @@ export default function PromptDetail() {
         return 'Unsaved changes';
     }
   };
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <LoadingSpinner />
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-white">
