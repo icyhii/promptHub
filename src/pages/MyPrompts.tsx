@@ -3,100 +3,44 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/common/C
 import Button from '../components/common/Button';
 import TagBadge from '../components/common/TagBadge';
 import { Plus, Filter, Download, UploadCloud, Tag, Search, Edit, Trash, Copy, Eye } from 'lucide-react';
+import { usePrompts } from '../hooks/usePrompts';
+import { ErrorBoundary } from 'react-error-boundary';
+import LoadingSpinner from '../components/common/LoadingSpinner';
+import toast from 'react-hot-toast';
+import { formatDistanceToNow } from 'date-fns';
 
-export default function MyPrompts() {
-  // Mock prompts data
-  const [prompts, setPrompts] = useState([
-    { 
-      id: 1, 
-      title: 'Customer Support Assistant', 
-      tags: ['support', 'gpt-4'], 
-      status: 'active',
-      model: 'GPT-4',
-      lastModified: '2 hours ago',
-      version: '2.3',
-      usage: 127
-    },
-    { 
-      id: 2, 
-      title: 'Creative Writing Prompt', 
-      tags: ['creative', 'claude-3'], 
-      status: 'active',
-      model: 'Claude-3',
-      lastModified: '1 day ago',
-      version: '1.5',
-      usage: 85
-    },
-    { 
-      id: 3, 
-      title: 'Data Analysis Helper', 
-      tags: ['analysis', 'gemini'], 
-      status: 'draft',
-      model: 'Gemini',
-      lastModified: '3 days ago',
-      version: '0.9',
-      usage: 204
-    },
-    { 
-      id: 4, 
-      title: 'Product Description Generator', 
-      tags: ['marketing', 'gpt-4'], 
-      status: 'active',
-      model: 'GPT-4',
-      lastModified: '1 week ago',
-      version: '3.1',
-      usage: 432
-    },
-    { 
-      id: 5, 
-      title: 'Email Response Template', 
-      tags: ['communication', 'claude-3'], 
-      status: 'deprecated',
-      model: 'Claude-3',
-      lastModified: '2 weeks ago',
-      version: '1.0',
-      usage: 956
-    },
-    { 
-      id: 6, 
-      title: 'Code Explainer', 
-      tags: ['development', 'gpt-4'], 
-      status: 'active',
-      model: 'GPT-4',
-      lastModified: '3 weeks ago',
-      version: '2.0',
-      usage: 782
-    },
-  ]);
+function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) {
+  return (
+    <div className="text-center py-8">
+      <p className="text-error-600 mb-4">Error loading prompts</p>
+      <Button onClick={resetErrorBoundary}>Try again</Button>
+    </div>
+  );
+}
 
-  // Mock tags for filtering
-  const availableTags = [
-    'support', 'creative', 'analysis', 'marketing', 
-    'communication', 'development', 'gpt-4', 'claude-3', 'gemini'
-  ];
-
+function MyPromptsContent() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
 
-  // Filter prompts based on search and filters
-  const filteredPrompts = prompts.filter(prompt => {
-    // Search term filter
-    const matchesSearch = prompt.title.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    // Tags filter
-    const matchesTags = selectedTags.length === 0 || 
-      selectedTags.some(tag => prompt.tags.includes(tag));
-    
-    // Model filter
-    const matchesModel = !selectedModel || prompt.model === selectedModel;
-    
-    // Status filter
-    const matchesStatus = !selectedStatus || prompt.status === selectedStatus;
-    
-    return matchesSearch && matchesTags && matchesModel && matchesStatus;
+  const {
+    prompts,
+    isLoading,
+    error,
+    createPrompt,
+    updatePrompt,
+    deletePrompt
+  } = usePrompts({
+    status: selectedStatus || undefined,
+    tags: selectedTags.length > 0 ? selectedTags : undefined,
+    search: searchTerm || undefined
   });
+
+  // Extract unique tags from all prompts
+  const availableTags = Array.from(
+    new Set(prompts?.flatMap(prompt => prompt.tags) || [])
+  ).sort();
 
   // Toggle tag selection
   const toggleTag = (tag: string) => {
@@ -106,6 +50,56 @@ export default function MyPrompts() {
       setSelectedTags([...selectedTags, tag]);
     }
   };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deletePrompt.mutateAsync(id);
+      toast.success('Prompt deleted successfully');
+    } catch (error) {
+      toast.error('Failed to delete prompt');
+    }
+  };
+
+  const handleDuplicate = async (prompt: any) => {
+    try {
+      const { id, created_at, updated_at, ...promptData } = prompt;
+      await createPrompt.mutateAsync({
+        ...promptData,
+        title: `${promptData.title} (Copy)`,
+        status: 'draft'
+      });
+      toast.success('Prompt duplicated successfully');
+    } catch (error) {
+      toast.error('Failed to duplicate prompt');
+    }
+  };
+
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
+
+  if (error) {
+    throw error;
+  }
+
+  // Filter prompts based on search and filters
+  const filteredPrompts = prompts?.filter(prompt => {
+    // Search term filter
+    const matchesSearch = searchTerm === '' || 
+      prompt.title.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    // Tags filter
+    const matchesTags = selectedTags.length === 0 || 
+      selectedTags.some(tag => prompt.tags.includes(tag));
+    
+    // Model filter
+    const matchesModel = !selectedModel || prompt.metadata?.model === selectedModel;
+    
+    // Status filter
+    const matchesStatus = !selectedStatus || prompt.status === selectedStatus;
+    
+    return matchesSearch && matchesTags && matchesModel && matchesStatus;
+  });
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -235,7 +229,7 @@ export default function MyPrompts() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredPrompts.length > 0 ? (
+                  {filteredPrompts && filteredPrompts.length > 0 ? (
                     filteredPrompts.map((prompt) => (
                       <tr key={prompt.id} className="hover:bg-neutralGray-light/40 border-b border-neutralGray-light last:border-0">
                         <td className="py-4 px-6">
@@ -253,7 +247,7 @@ export default function MyPrompts() {
                           </div>
                         </td>
                         <td className="py-4 px-6 text-sm text-textSecondary">
-                          {prompt.model}
+                          {prompt.metadata?.model || 'N/A'}
                         </td>
                         <td className="py-4 px-6">
                           <TagBadge 
@@ -270,23 +264,39 @@ export default function MyPrompts() {
                           </TagBadge>
                         </td>
                         <td className="py-4 px-6 text-sm text-textSecondary">
-                          v{prompt.version}
+                          v{prompt.metadata?.version || '1.0'}
                         </td>
                         <td className="py-4 px-6 text-sm text-textSecondary">
-                          {prompt.lastModified}
+                          {formatDistanceToNow(new Date(prompt.updated_at), { addSuffix: true })}
                         </td>
                         <td className="py-4 px-6 text-right">
                           <div className="flex justify-end space-x-2">
-                            <button className="p-1 text-neutralGray-dark hover:text-accentBlue" title="View">
+                            <button 
+                              className="p-1 text-neutralGray-dark hover:text-accentBlue" 
+                              title="View"
+                              onClick={() => window.location.href = `/prompts/${prompt.id}`}
+                            >
                               <Eye size={16} />
                             </button>
-                            <button className="p-1 text-neutralGray-dark hover:text-accentBlue" title="Edit">
+                            <button 
+                              className="p-1 text-neutralGray-dark hover:text-accentBlue" 
+                              title="Edit"
+                              onClick={() => window.location.href = `/prompts/${prompt.id}/edit`}
+                            >
                               <Edit size={16} />
                             </button>
-                            <button className="p-1 text-neutralGray-dark hover:text-accentBlue" title="Duplicate">
+                            <button 
+                              className="p-1 text-neutralGray-dark hover:text-accentBlue" 
+                              title="Duplicate"
+                              onClick={() => handleDuplicate(prompt)}
+                            >
                               <Copy size={16} />
                             </button>
-                            <button className="p-1 text-accentRed hover:text-accentRed/80" title="Delete">
+                            <button 
+                              className="p-1 text-accentRed hover:text-accentRed/80" 
+                              title="Delete"
+                              onClick={() => handleDelete(prompt.id)}
+                            >
                               <Trash size={16} />
                             </button>
                           </div>
@@ -323,5 +333,16 @@ export default function MyPrompts() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function MyPrompts() {
+  return (
+    <ErrorBoundary
+      FallbackComponent={ErrorFallback}
+      onReset={() => window.location.reload()}
+    >
+      <MyPromptsContent />
+    </ErrorBoundary>
   );
 }
