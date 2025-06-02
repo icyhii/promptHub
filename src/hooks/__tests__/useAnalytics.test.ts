@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react-hooks';
+import { renderHook, waitFor } from '@testing-library/react';
 import { useAnalytics } from '../useAnalytics';
 import { supabase } from '../../lib/supabase';
 import { vi } from 'vitest';
