@@ -2,13 +2,25 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/common/Card';
 import Button from '../components/common/Button';
 import { LineChart, BarChart, CheckCircle, AlertTriangle, Play, Save, ArrowRight, Edit, Lightbulb, RefreshCw } from 'lucide-react';
+import { optimizePrompt, type OptimizePromptResponse } from '../lib/api';
+import { ErrorBoundary } from 'react-error-boundary';
+import toast from 'react-hot-toast';
 
-export default function Optimization() {
+function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) {
+  return (
+    <div className="text-center py-8">
+      <p className="text-error-600 mb-4">Error: {error.message}</p>
+      <Button onClick={resetErrorBoundary}>Try again</Button>
+    </div>
+  );
+}
+
+function OptimizationContent() {
   const [selectedPrompt, setSelectedPrompt] = useState('customer-support');
   const [optimizationGoals, setOptimizationGoals] = useState(['conciseness', 'factuality']);
   const [optimizationMethod, setOptimizationMethod] = useState('ai');
   const [isOptimizing, setIsOptimizing] = useState(false);
-  const [optimizationComplete, setOptimizationComplete] = useState(false);
+  const [optimizationResult, setOptimizationResult] = useState<OptimizePromptResponse | null>(null);
 
   // Mock data for prompt selection
   const prompts = [
@@ -57,35 +69,24 @@ DO NOT:
     }
   };
 
-  const runOptimization = () => {
-    setIsOptimizing(true);
-    
-    // Simulate optimization process with a delay
-    setTimeout(() => {
-      setOptimizedPrompt(`You are a software company's customer support assistant.
-
-GOALS:
-- Answer product feature questions accurately
-- Provide clear troubleshooting steps
-- Escalate complex issues to humans
-- Maintain professionalism
-
-TROUBLESHOOTING PROCESS:
-1. Request specific error message
-2. Confirm restart attempt
-3. Verify software version
-4. Provide numbered, sequential instructions
-
-BOUNDARIES:
-- No internal company information
-- No feature promises
-- No processing refunds/billing
-
-Remember: Short responses focused on solutions.`);
+  const runOptimization = async () => {
+    try {
+      setIsOptimizing(true);
+      const response = await optimizePrompt({
+        originalPrompt: promptContent,
+        targetOutcome: optimizationGoals.join(','),
+        constraints: ['maintain_tone', 'preserve_key_points']
+      });
       
+      setOptimizationResult(response);
+      setOptimizedPrompt(response.optimizedPrompt);
+      toast.success('Optimization completed successfully');
+    } catch (error) {
+      toast.error('Failed to optimize prompt');
+      console.error('Error:', error);
+    } finally {
       setIsOptimizing(false);
-      setOptimizationComplete(true);
-    }, 3000);
+    }
   };
 
   // Mock scores for visualization
@@ -259,7 +260,7 @@ Remember: Short responses focused on solutions.`);
       </div>
 
       {/* Results Section - Only show when optimization is complete */}
-      {optimizationComplete && (
+      {optimizationResult && (
         <div className="space-y-6">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white mt-6">Optimization Results</h2>
 
@@ -362,5 +363,16 @@ Remember: Short responses focused on solutions.`);
         </div>
       )}
     </div>
+  );
+}
+
+export default function Optimization() {
+  return (
+    <ErrorBoundary
+      FallbackComponent={ErrorFallback}
+      onReset={() => window.location.reload()}
+    >
+      <OptimizationContent />
+    </ErrorBoundary>
   );
 }
