@@ -2,79 +2,51 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/common/Card';
 import Button from '../components/common/Button';
 import { Play, Copy, Save, Lightbulb, RefreshCcw, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { runPrompt, type PromptRunResponse } from '../lib/api';
+import { ErrorBoundary } from 'react-error-boundary';
+import toast from 'react-hot-toast';
 
-export default function Playground() {
+function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) {
+  return (
+    <div className="text-center py-8">
+      <p className="text-error-600 mb-4">Error: {error.message}</p>
+      <Button onClick={resetErrorBoundary}>Try again</Button>
+    </div>
+  );
+}
+
+function PlaygroundContent() {
   const [promptInput, setPromptInput] = useState(
     `Create a compelling product description for a new smartwatch that tracks health metrics and has a 7-day battery life. The target audience is fitness enthusiasts aged 25-40.`
   );
   
-  const [promptVariantA, setPromptVariantA] = useState(
-    `Write a product description for a fitness smartwatch with health tracking and long battery life. Target audience: fitness enthusiasts 25-40 years old.`
-  );
-  
-  const [promptVariantB, setPromptVariantB] = useState(
-    `Craft an engaging and persuasive product description for our revolutionary new smartwatch. It features comprehensive health metric tracking capabilities and an industry-leading 7-day battery life. This product is specifically designed for health-conscious fitness enthusiasts between 25-40 years of age.`
-  );
-
   const [selectedModel, setSelectedModel] = useState('gpt-4');
   const [temperature, setTemperature] = useState(0.7);
-  const [outputOriginal, setOutputOriginal] = useState('');
-  const [outputVariantA, setOutputVariantA] = useState('');
-  const [outputVariantB, setOutputVariantB] = useState('');
+  const [maxTokens, setMaxTokens] = useState(500);
+  const [output, setOutput] = useState<PromptRunResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('a-b');
+  const [activeTab, setActiveTab] = useState('single');
 
-  const runTest = () => {
-    setIsLoading(true);
-    
-    // Simulate API calls with delayed responses
-    setTimeout(() => {
-      setOutputOriginal(`**PULSE PRO X7: Your Personal Health Guardian**
-
-Introducing the PULSE PRO X7, the ultimate smartwatch designed for fitness enthusiasts who demand more from their wearable technology. This sleek, powerful device seamlessly integrates into your active lifestyle, providing comprehensive health tracking while maintaining an impressive 7-day battery life.
-
-The PULSE PRO X7 continuously monitors your vital health metrics including heart rate variability, blood oxygen levels, sleep quality, and stress levels. Its advanced sensors provide medical-grade accuracy, giving you actionable insights to optimize your training and recovery.
-
-With specialized workout modes for running, cycling, swimming (water-resistant to 50m), strength training, and HIIT, the PULSE PRO X7 adapts to your fitness routine. The intuitive coaching feature provides real-time feedback to help you maintain proper form and intensity.
-
-The vibrant AMOLED display remains visible even in bright sunlight, while the responsive touch interface works flawlessly even with sweaty fingers. The durable yet lightweight titanium frame withstands the rigors of your most intense workouts.
-
-Never miss a beat with smart notifications and seamless smartphone integration. The dedicated PULSE app transforms your data into personalized recommendations to help you achieve your fitness goals faster.
-
-Take your training to the next level with the PULSE PRO X7 – because your health deserves the best technology.`);
+  const handleRunPrompt = async () => {
+    try {
+      setIsLoading(true);
+      const response = await runPrompt({
+        prompt: promptInput,
+        model: selectedModel,
+        parameters: {
+          temperature,
+          maxTokens
+        }
+      });
       
-      setOutputVariantA(`**FitTrack X7: Your Fitness Journey Partner**
-
-Meet the FitTrack X7 - the smartwatch that fitness enthusiasts have been waiting for. Built specifically for those who take their health seriously, this powerful device packs advanced health monitoring into a sleek, wearable design with an incredible week-long battery life.
-
-The FitTrack X7 gives you comprehensive health insights by tracking your heart rate, sleep patterns, stress levels, and activity metrics with precision. Its robust sensors provide reliable data to help you optimize both your workouts and recovery time.
-
-Whether you're running, cycling, swimming, or lifting weights, the FitTrack X7 has specialized modes to track your performance. The watch is water-resistant to 50 meters, making it perfect for swimmers and those who don't want to remove their watch in the shower.
-
-The bright, crisp display is easily visible outdoors, and the intuitive interface makes navigating between features effortless. Its comfortable band ensures it stays in place during even the most intense workouts.
-
-With smart notifications and phone connectivity, you'll stay connected while focusing on your fitness. The companion app translates your health data into actionable insights tailored to your specific goals.
-
-For fitness enthusiasts who demand reliable technology that keeps up with their active lifestyle, the FitTrack X7 is the perfect companion on your journey to peak performance.`);
-      
-      setOutputVariantB(`**VITALITY WATCH PRO: REDEFINING FITNESS TECHNOLOGY**
-
-Revolutionary. Transformative. Essential. The Vitality Watch Pro represents the pinnacle of health monitoring technology, meticulously engineered for dedicated fitness enthusiasts who refuse to compromise.
-
-This extraordinary smartwatch harnesses cutting-edge biometric sensors to deliver unprecedented insights into your physiological performance. Track over 25 distinct health metrics with clinical-grade precision, including advanced cardiovascular analysis, respiratory efficiency, and metabolic indicators previously only available in medical facilities.
-
-The industry-defying 7-day battery life eliminates charging anxiety, ensuring uninterrupted monitoring through your most demanding training cycles. Our proprietary power management system optimizes energy consumption without sacrificing performance.
-
-The sleek, aerospace-grade titanium housing withstands extreme conditions while maintaining an elegant, professional aesthetic suitable for transition from intense workouts to business meetings. The adaptive AMOLED display automatically adjusts to environmental lighting, ensuring perfect visibility from predawn runs to evening yoga sessions.
-
-Our AI-powered fitness coach analyzes your personal data to deliver customized training recommendations, helping you break through plateaus and achieve peak performance. The exclusive Vitality app ecosystem connects you with like-minded fitness enthusiasts and certified trainers.
-
-The Vitality Watch Pro isn't just a smartwatch—it's your commitment to excellence, visualized on your wrist. Because those who pursue extraordinary results deserve extraordinary tools.
-
-*Vitality Watch Pro: Your Journey. Perfected.*`);
-      
+      setOutput(response);
+      toast.success('Prompt executed successfully');
+    } catch (error) {
+      toast.error('Failed to execute prompt');
+      console.error('Error:', error);
+    } finally {
       setIsLoading(false);
-    }, 2000);
+    }
   };
 
   return (
@@ -83,22 +55,22 @@ The Vitality Watch Pro isn't just a smartwatch—it's your commitment to excelle
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Prompt Playground</h1>
         <div className="flex space-x-2">
           <Button 
-            variant={activeTab === 'a-b' ? 'primary' : 'outline'} 
-            onClick={() => setActiveTab('a-b')}
-          >
-            A/B Testing
-          </Button>
-          <Button 
             variant={activeTab === 'single' ? 'primary' : 'outline'} 
             onClick={() => setActiveTab('single')}
           >
             Single Prompt
           </Button>
+          <Button 
+            variant={activeTab === 'a-b' ? 'primary' : 'outline'} 
+            onClick={() => setActiveTab('a-b')}
+          >
+            A/B Testing
+          </Button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Sidebar with Settings */}
+        {/* Settings Sidebar */}
         <div className="lg:col-span-1">
           <Card>
             <CardHeader>
@@ -140,239 +112,115 @@ The Vitality Watch Pro isn't just a smartwatch—it's your commitment to excelle
                 </div>
               </div>
 
-              <div className="pt-4">
-                <Button 
-                  className="w-full" 
-                  leftIcon={<Play size={16} />}
-                  onClick={runTest}
-                  isLoading={isLoading}
-                >
-                  {isLoading ? 'Running Test...' : 'Run Test'}
-                </Button>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Max Tokens: {maxTokens}
+                </label>
+                <input
+                  type="range"
+                  min="100"
+                  max="2000"
+                  step="100"
+                  value={maxTokens}
+                  onChange={(e) => setMaxTokens(parseInt(e.target.value))}
+                  className="w-full"
+                />
               </div>
 
-              <div className="pt-4">
-                <Button 
-                  variant="outline" 
-                  className="w-full" 
-                  leftIcon={<Save size={16} />}
-                  disabled={!outputOriginal}
-                >
-                  Save Best Variant
-                </Button>
-              </div>
-
-              <div className="pt-4">
-                <Button 
-                  variant="outline" 
-                  className="w-full" 
-                  leftIcon={<RefreshCcw size={16} />}
-                  onClick={() => {
-                    setPromptInput('');
-                    setPromptVariantA('');
-                    setPromptVariantB('');
-                    setOutputOriginal('');
-                    setOutputVariantA('');
-                    setOutputVariantB('');
-                  }}
-                >
-                  Reset All
-                </Button>
-              </div>
+              <Button 
+                className="w-full" 
+                leftIcon={<Play size={16} />}
+                onClick={handleRunPrompt}
+                isLoading={isLoading}
+              >
+                {isLoading ? 'Running...' : 'Run Prompt'}
+              </Button>
             </CardContent>
           </Card>
         </div>
 
-        {/* Main Playground Area */}
+        {/* Main Content Area */}
         <div className="lg:col-span-3">
-          <div className="space-y-6">
-            {/* Prompt Inputs */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <Card className="lg:col-span-1">
-                <CardHeader>
-                  <CardTitle>Original Prompt</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <textarea
-                    value={promptInput}
-                    onChange={(e) => setPromptInput(e.target.value)}
-                    className="w-full h-40 p-3 font-mono text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
-                    placeholder="Enter your prompt here..."
-                  />
-                </CardContent>
-              </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Prompt</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <textarea
+                value={promptInput}
+                onChange={(e) => setPromptInput(e.target.value)}
+                className="w-full h-40 p-3 font-mono text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                placeholder="Enter your prompt here..."
+              />
+            </CardContent>
+          </Card>
 
-              {activeTab === 'a-b' && (
-                <>
-                  <Card className="lg:col-span-1">
-                    <CardHeader>
-                      <CardTitle>Variant A</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <textarea
-                        value={promptVariantA}
-                        onChange={(e) => setPromptVariantA(e.target.value)}
-                        className="w-full h-40 p-3 font-mono text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
-                        placeholder="Enter variant A here..."
-                      />
-                    </CardContent>
-                  </Card>
-
-                  <Card className="lg:col-span-1">
-                    <CardHeader>
-                      <CardTitle>Variant B</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <textarea
-                        value={promptVariantB}
-                        onChange={(e) => setPromptVariantB(e.target.value)}
-                        className="w-full h-40 p-3 font-mono text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
-                        placeholder="Enter variant B here..."
-                      />
-                    </CardContent>
-                  </Card>
-                </>
+          <Card className="mt-6">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Output</CardTitle>
+              {output && (
+                <div className="flex space-x-2">
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    leftIcon={<Copy size={14} />}
+                    onClick={() => {
+                      navigator.clipboard.writeText(output.text);
+                      toast.success('Copied to clipboard');
+                    }}
+                  >
+                    Copy
+                  </Button>
+                </div>
               )}
-            </div>
-
-            {/* Outputs */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <Card className="lg:col-span-1">
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle>Original Output</CardTitle>
-                  {outputOriginal && (
-                    <div className="flex space-x-2">
-                      <Button 
-                        size="sm" 
-                        variant="ghost" 
-                        leftIcon={<Copy size={14} />}
-                        onClick={() => navigator.clipboard.writeText(outputOriginal)}
-                      >
-                        Copy
-                      </Button>
-                    </div>
-                  )}
-                </CardHeader>
-                <CardContent>
-                  <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md p-3 h-80 overflow-y-auto">
-                    {isLoading ? (
-                      <div className="flex flex-col items-center justify-center h-full">
-                        <div className="h-6 w-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin mb-2"></div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Generating output...</p>
-                      </div>
-                    ) : outputOriginal ? (
-                      <div className="prose prose-sm max-w-none dark:prose-invert">
-                        <div className="whitespace-pre-line">{outputOriginal}</div>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center h-full text-center text-gray-400">
-                        <Lightbulb size={24} className="mb-2" />
-                        <p>Run the test to see output</p>
-                      </div>
-                    )}
+            </CardHeader>
+            <CardContent>
+              <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md p-3 min-h-[200px]">
+                {isLoading ? (
+                  <div className="flex flex-col items-center justify-center h-full">
+                    <div className="h-6 w-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin mb-2"></div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Generating output...</p>
                   </div>
-                  {outputOriginal && (
-                    <div className="flex justify-center mt-3 space-x-2">
-                      <Button size="sm" variant="outline" leftIcon={<ThumbsUp size={14} />}>Like</Button>
-                      <Button size="sm" variant="outline" leftIcon={<ThumbsDown size={14} />}>Dislike</Button>
+                ) : output ? (
+                  <div className="space-y-4">
+                    <div className="prose prose-sm max-w-none dark:prose-invert">
+                      <div className="whitespace-pre-line">{output.text}</div>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {activeTab === 'a-b' && (
-                <>
-                  <Card className="lg:col-span-1">
-                    <CardHeader className="flex flex-row items-center justify-between">
-                      <CardTitle>Variant A Output</CardTitle>
-                      {outputVariantA && (
-                        <div className="flex space-x-2">
-                          <Button 
-                            size="sm" 
-                            variant="ghost" 
-                            leftIcon={<Copy size={14} />}
-                            onClick={() => navigator.clipboard.writeText(outputVariantA)}
-                          >
-                            Copy
-                          </Button>
-                        </div>
-                      )}
-                    </CardHeader>
-                    <CardContent>
-                      <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md p-3 h-80 overflow-y-auto">
-                        {isLoading ? (
-                          <div className="flex flex-col items-center justify-center h-full">
-                            <div className="h-6 w-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin mb-2"></div>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Generating output...</p>
-                          </div>
-                        ) : outputVariantA ? (
-                          <div className="prose prose-sm max-w-none dark:prose-invert">
-                            <div className="whitespace-pre-line">{outputVariantA}</div>
-                          </div>
-                        ) : (
-                          <div className="flex flex-col items-center justify-center h-full text-center text-gray-400">
-                            <Lightbulb size={24} className="mb-2" />
-                            <p>Run the test to see output</p>
-                          </div>
-                        )}
-                      </div>
-                      {outputVariantA && (
-                        <div className="flex justify-center mt-3 space-x-2">
-                          <Button size="sm" variant="outline" leftIcon={<ThumbsUp size={14} />}>Like</Button>
-                          <Button size="sm" variant="outline" leftIcon={<ThumbsDown size={14} />}>Dislike</Button>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-
-                  <Card className="lg:col-span-1">
-                    <CardHeader className="flex flex-row items-center justify-between">
-                      <CardTitle>Variant B Output</CardTitle>
-                      {outputVariantB && (
-                        <div className="flex space-x-2">
-                          <Button 
-                            size="sm" 
-                            variant="ghost" 
-                            leftIcon={<Copy size={14} />}
-                            onClick={() => navigator.clipboard.writeText(outputVariantB)}
-                          >
-                            Copy
-                          </Button>
-                        </div>
-                      )}
-                    </CardHeader>
-                    <CardContent>
-                      <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md p-3 h-80 overflow-y-auto">
-                        {isLoading ? (
-                          <div className="flex flex-col items-center justify-center h-full">
-                            <div className="h-6 w-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin mb-2"></div>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Generating output...</p>
-                          </div>
-                        ) : outputVariantB ? (
-                          <div className="prose prose-sm max-w-none dark:prose-invert">
-                            <div className="whitespace-pre-line">{outputVariantB}</div>
-                          </div>
-                        ) : (
-                          <div className="flex flex-col items-center justify-center h-full text-center text-gray-400">
-                            <Lightbulb size={24} className="mb-2" />
-                            <p>Run the test to see output</p>
-                          </div>
-                        )}
-                      </div>
-                      {outputVariantB && (
-                        <div className="flex justify-center mt-3 space-x-2">
-                          <Button size="sm" variant="outline" leftIcon={<ThumbsUp size={14} />}>Like</Button>
-                          <Button size="sm" variant="outline" leftIcon={<ThumbsDown size={14} />}>Dislike</Button>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </>
+                    <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 pt-4 border-t border-gray-200 dark:border-gray-700">
+                      <div>Model: {output.model}</div>
+                      <div>Tokens: {output.tokens}</div>
+                      <div>Time: {(output.duration_ms / 1000).toFixed(2)}s</div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full text-center text-gray-400">
+                    <Lightbulb size={24} className="mb-2" />
+                    <p>Run the prompt to see output</p>
+                  </div>
+                )}
+              </div>
+              
+              {output && (
+                <div className="flex justify-center mt-4 space-x-2">
+                  <Button size="sm" variant="outline" leftIcon={<ThumbsUp size={14} />}>Like</Button>
+                  <Button size="sm" variant="outline" leftIcon={<ThumbsDown size={14} />}>Dislike</Button>
+                </div>
               )}
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function Playground() {
+  return (
+    <ErrorBoundary
+      FallbackComponent={ErrorFallback}
+      onReset={() => window.location.reload()}
+    >
+      <PlaygroundContent />
+    </ErrorBoundary>
   );
 }
