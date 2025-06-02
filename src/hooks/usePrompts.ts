@@ -60,9 +60,20 @@ export function usePrompts(filters?: PromptFilters) {
 
   const createPrompt = useMutation({
     mutationFn: async (newPrompt: Partial<Prompt>) => {
+      // Get the current user's ID
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+      if (!user) throw new Error('User must be authenticated to create prompts');
+
+      // Add the creator_id to the new prompt
+      const promptWithCreator = {
+        ...newPrompt,
+        creator_id: user.id
+      };
+
       const { data, error } = await supabase
         .from('prompts')
-        .insert(newPrompt)
+        .insert(promptWithCreator)
         .select()
         .single();
       
