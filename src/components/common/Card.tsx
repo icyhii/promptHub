@@ -5,16 +5,27 @@ interface CardProps {
   className?: string;
   role?: string;
   'aria-labelledby'?: string;
+  onClick?: () => void;
+  isClickable?: boolean;
 }
 
-export function Card({ children, className, role = 'region', ...props }: CardProps) {
+export function Card({ 
+  children, 
+  className, 
+  role = 'region', 
+  onClick,
+  isClickable = !!onClick,
+  ...props 
+}: CardProps) {
   return (
     <div 
       className={cn(
         'bg-white rounded-lg shadow border border-neutralGray-light overflow-hidden',
+        isClickable && 'cursor-pointer transition-all duration-200 hover:shadow-lg hover:border-accentBlue/30 hover:translate-y-[-2px]',
         className
       )}
       role={role}
+      onClick={onClick}
       {...props}
     >
       {children}
