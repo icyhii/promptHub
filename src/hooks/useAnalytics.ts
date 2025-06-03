@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../lib/supabase';
+import { supabase, verifySupabaseConnection } from '../lib/supabase';
 import { startOfDay, subDays, format } from 'date-fns';
 
 export interface AnalyticsData {
@@ -54,6 +54,9 @@ export function useAnalytics(days: number = 30) {
     queryKey: ['analytics', days],
     queryFn: async (): Promise<AnalyticsData> => {
       try {
+        // First verify Supabase connection
+        await verifySupabaseConnection();
+        
         const startDate = startOfDay(subDays(new Date(), days));
         
         // Fetch analytics data with error handling
