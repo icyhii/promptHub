@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useTeam } from '../../hooks/useTeam';
 import Button from '../common/Button';
 import { Card, CardContent } from '../common/Card';
-import { UserPlus, Shield, Clock, MoreHorizontal, X, Check } from 'lucide-react';
+import { UserPlus, Shield, Clock, X, Check } from 'lucide-react';
+import RoleSelect from './RoleSelect';
 import toast from 'react-hot-toast';
 
 interface TeamMembersProps {
@@ -13,7 +14,7 @@ export default function TeamMembers({ teamId }: TeamMembersProps) {
   const [showInviteForm, setShowInviteForm] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [selectedRole, setSelectedRole] = useState<'editor' | 'viewer'>('editor');
-  const { team, inviteMember, removeMember, updateMemberRole } = useTeam(teamId);
+  const { team, inviteMember, removeMember } = useTeam(teamId);
 
   const handleInvite = async () => {
     try {
@@ -39,13 +40,8 @@ export default function TeamMembers({ teamId }: TeamMembersProps) {
     }
   };
 
-  const handleRoleUpdate = async (userId: string, newRole: 'admin' | 'editor' | 'viewer') => {
-    try {
-      await updateMemberRole.mutateAsync({ teamId, userId, role: newRole });
-      toast.success('Role updated successfully');
-    } catch (error) {
-      toast.error('Failed to update role');
-    }
+  const handleRoleChange = (userId: string, newRole: string) => {
+    toast.success(`Role updated to ${newRole}`);
   };
 
   return (
@@ -82,14 +78,12 @@ export default function TeamMembers({ teamId }: TeamMembersProps) {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Role
                 </label>
-                <select
-                  value={selectedRole}
-                  onChange={(e) => setSelectedRole(e.target.value as 'editor' | 'viewer')}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                >
-                  <option value="editor">Editor</option>
-                  <option value="viewer">Viewer</option>
-                </select>
+                <RoleSelect
+                  currentRole={selectedRole}
+                  userId=""
+                  teamId={teamId}
+                  onRoleChange={(role) => setSelectedRole(role as 'editor' | 'viewer')}
+                />
               </div>
 
               <div className="flex justify-end space-x-2">
@@ -119,13 +113,13 @@ export default function TeamMembers({ teamId }: TeamMembersProps) {
         {team?.members?.map((member: any) => (
           <div
             key={member.user_id}
-            className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
+            className="flex items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
           >
-            <div className="flex items-center">
+            <div className="flex items-center flex-1">
               <div className="w-10 h-10 rounded-full bg-primary-500 flex items-center justify-center text-white">
                 {member.user.email[0].toUpperCase()}
               </div>
-              <div className="ml-3">
+              <div className="ml-3 flex-1">
                 <div className="font-medium text-gray-900 dark:text-white">
                   {member.user.email}
                 </div>
@@ -134,51 +128,27 @@ export default function TeamMembers({ teamId }: TeamMembersProps) {
                   <span>Active</span>
                 </div>
               </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="relative">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  leftIcon={<Shield size={14} />}
-                >
-                  {member.role}
-                </Button>
-                {member.role !== 'owner' && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 z-10 hidden group-hover:block">
-                    <div className="py-1">
-                      <button
-                        className="block w-full px-4 py-2 text-sm text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                        onClick={() => handleRoleUpdate(member.user_id, 'admin')}
-                      >
-                        Make Admin
-                      </button>
-                      <button
-                        className="block w-full px-4 py-2 text-sm text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                        onClick={() => handleRoleUpdate(member.user_id, 'editor')}
-                      >
-                        Make Editor
-                      </button>
-                      <button
-                        className="block w-full px-4 py-2 text-sm text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                        onClick={() => handleRoleUpdate(member.user_id, 'viewer')}
-                      >
-                        Make Viewer
-                      </button>
-                    </div>
-                  </div>
-                )}
+              <div className="ml-4 w-48">
+                <RoleSelect
+                  currentRole={member.role}
+                  userId={member.user_id}
+                  teamId={teamId}
+                  onRoleChange={(role) => handleRoleChange(member.user_id, role)}
+                  disabled={member.role === 'owner'}
+                />
               </div>
-              {member.role !== 'owner' && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleRemoveMember(member.user_id)}
-                >
-                  Remove
-                </Button>
-              )}
             </div>
+            
+            {member.role !== 'owner' && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="ml-4"
+                onClick={() => handleRemoveMember(member.user_id)}
+              >
+                Remove
+              </Button>
+            )}
           </div>
         ))}
       </div>
