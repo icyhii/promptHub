@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/common/Card';
 import Button from '../components/common/Button';
-import { Plus, Users, FileText, Clock, Shield } from 'lucide-react';
+import { Plus, Users, Settings as SettingsIcon, MessageSquare } from 'lucide-react';
 import { useTeam } from '../hooks/useTeam';
 import TeamChat from '../components/teams/TeamChat';
 import TeamMembers from '../components/teams/TeamMembers';
+import TeamSettings from '../components/teams/TeamSettings';
 import { ErrorBoundary } from 'react-error-boundary';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import toast from 'react-hot-toast';
@@ -20,6 +21,7 @@ function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetError
 
 function TeamsContent() {
   const [activeTeam, setActiveTeam] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'chat' | 'members' | 'settings'>('chat');
   const { userTeams, createTeam, isLoading } = useTeam();
 
   const handleCreateTeam = async () => {
@@ -88,18 +90,64 @@ function TeamsContent() {
         {/* Team Dashboard */}
         <div className="lg:col-span-3">
           {activeTeam ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card className="lg:col-span-2">
-                <CardContent className="h-[600px]">
-                  <TeamChat teamId={activeTeam} />
+            <div className="space-y-6">
+              <Card>
+                <CardContent className="p-0">
+                  <div className="flex border-b border-gray-200 dark:border-gray-700">
+                    <button
+                      className={`px-6 py-3 text-sm font-medium ${
+                        activeTab === 'chat'
+                          ? 'border-b-2 border-primary-500 text-primary-600'
+                          : 'text-gray-500 hover:text-gray-700'
+                      }`}
+                      onClick={() => setActiveTab('chat')}
+                    >
+                      <MessageSquare size={16} className="inline-block mr-2" />
+                      Team Chat
+                    </button>
+                    <button
+                      className={`px-6 py-3 text-sm font-medium ${
+                        activeTab === 'members'
+                          ? 'border-b-2 border-primary-500 text-primary-600'
+                          : 'text-gray-500 hover:text-gray-700'
+                      }`}
+                      onClick={() => setActiveTab('members')}
+                    >
+                      <Users size={16} className="inline-block mr-2" />
+                      Members
+                    </button>
+                    <button
+                      className={`px-6 py-3 text-sm font-medium ${
+                        activeTab === 'settings'
+                          ? 'border-b-2 border-primary-500 text-primary-600'
+                          : 'text-gray-500 hover:text-gray-700'
+                      }`}
+                      onClick={() => setActiveTab('settings')}
+                    >
+                      <SettingsIcon size={16} className="inline-block mr-2" />
+                      Settings
+                    </button>
+                  </div>
                 </CardContent>
               </Card>
 
-              <Card className="lg:col-span-2">
-                <CardContent>
-                  <TeamMembers teamId={activeTeam} />
-                </CardContent>
-              </Card>
+              {activeTab === 'chat' && (
+                <Card>
+                  <CardContent className="h-[600px]">
+                    <TeamChat teamId={activeTeam} />
+                  </CardContent>
+                </Card>
+              )}
+
+              {activeTab === 'members' && (
+                <Card>
+                  <CardContent>
+                    <TeamMembers teamId={activeTeam} />
+                  </CardContent>
+                </Card>
+              )}
+
+              {activeTab === 'settings' && <TeamSettings teamId={activeTeam} />}
             </div>
           ) : (
             <div className="text-center py-12">
