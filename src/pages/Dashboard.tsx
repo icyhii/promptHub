@@ -19,13 +19,14 @@ import {
   BarChart as BarChartIcon,
   LineChart as LineChartIcon,
   DollarSign,
-  Zap
+  Zap,
+  MoreVertical
 } from 'lucide-react';
 import { usePrompts } from '../hooks/usePrompts';
 import { useAnalytics } from '../hooks/useAnalytics';
 import { useTeam } from '../hooks/useTeam';
 import { useAuth } from '../hooks/useAuth';
-import { format, formatDistanceToNow } from 'date-fns';
+import { format, formatDistanceToNow, isThisYear, isThisMonth, isToday } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { ErrorBoundary } from 'react-error-boundary';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -49,6 +50,20 @@ function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetError
   );
 }
 
+function formatChartDate(date: string | number | Date) {
+  const dateObj = new Date(date);
+  if (isToday(dateObj)) {
+    return format(dateObj, 'h:mm a');
+  }
+  if (isThisMonth(dateObj)) {
+    return format(dateObj, 'MMM d');
+  }
+  if (isThisYear(dateObj)) {
+    return format(dateObj, 'MMM d');
+  }
+  return format(dateObj, 'MMM d, yyyy');
+}
+
 function DashboardContent() {
   const navigate = useNavigate();
   const { prompts, isLoading: isPromptsLoading } = usePrompts();
@@ -57,7 +72,6 @@ function DashboardContent() {
   const { user } = useAuth();
   const [activityFilter, setActivityFilter] = useState<string | null>(null);
 
-  // Refetch analytics every 30 seconds
   useEffect(() => {
     const interval = setInterval(() => {
       refetch();
@@ -87,7 +101,6 @@ function DashboardContent() {
     };
   };
 
-  // Calculate changes for metrics
   const currentPeriod = analytics?.historicalData.slice(-7) || [];
   const previousPeriod = analytics?.historicalData.slice(-14, -7) || [];
   
@@ -109,7 +122,6 @@ function DashboardContent() {
         </Button>
       </div>
 
-      {/* Metrics Overview */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardContent className="p-6">
@@ -202,7 +214,6 @@ function DashboardContent() {
         </Card>
       </div>
 
-      {/* Usage Trends */}
       <Card>
         <CardHeader>
           <CardTitle>Usage Trends</CardTitle>
@@ -220,11 +231,12 @@ function DashboardContent() {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis 
                   dataKey="date" 
-                  tickFormatter={(date) => format(new Date(date), 'MMM d')}
+                  tickFormatter={formatChartDate}
+                  minTickGap={30}
                 />
                 <YAxis />
                 <Tooltip 
-                  labelFormatter={(date) => format(new Date(date), 'MMM d, yyyy')}
+                  labelFormatter={(date) => format(new Date(date), 'PPP')}
                   formatter={(value: number) => [value.toLocaleString(), 'Usage']}
                 />
                 <Area 
@@ -241,7 +253,6 @@ function DashboardContent() {
       </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Prompts */}
         <Card>
           <CardHeader>
             <CardTitle>Recent Prompts</CardTitle>
@@ -249,35 +260,47 @@ function DashboardContent() {
           <CardContent>
             <div className="space-y-4">
               {recentPrompts.map(prompt => (
-                <div 
-                  key={prompt.id} 
-                  className="flex items-start justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                <Card
+                  key={prompt.id}
+                  isClickable
                   onClick={() => navigate(`/prompts/${prompt.id}`)}
+                  className="relative group"
                 >
-                  <div className="flex-1">
-                    <h3 className="font-medium text-gray-900 dark:text-white">
-                      {prompt.title.length > 50 ? `${prompt.title.substring(0, 47)}...` : prompt.title}
-                    </h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                      {prompt.body.substring(0, 100)}...
-                    </p>
-                    <div className="flex items-center mt-2 text-sm text-gray-500 dark:text-gray-400">
-                      <Clock size={14} className="mr-1" />
-                      {formatDistanceToNow(new Date(prompt.updated_at), { addSuffix: true })}
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="font-medium text-gray-900 dark:text-white group-hover:text-accentBlue transition-colors">
+                          {prompt.title.length > 50 ? `${prompt.title.substring(0, 47)}...` : prompt.title}
+                        </h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                          {prompt.body.substring(0, 100)}...
+                        </p>
+                        <div className="flex items-center mt-2 text-sm text-gray-500 dark:text-gray-400">
+                          <Clock size={14} className="mr-1" />
+                          {formatDistanceToNow(new Date(prompt.updated_at), { addSuffix: true })}
+                        </div>
+                      </div>
+                      <div className="relative">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Handle menu open
+                          }}
+                        >
+                          <MoreVertical size={16} />
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                  <div className="ml-4 flex space-x-2">
-                    <Button variant="outline" size="sm">
-                      Edit
-                    </Button>
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
               ))}
             </div>
           </CardContent>
         </Card>
 
-        {/* Playground Quick Access */}
         <Card>
           <CardHeader>
             <CardTitle>Continue Working</CardTitle>
@@ -316,7 +339,6 @@ function DashboardContent() {
         </Card>
       </div>
 
-      {/* Community Section */}
       <div className="grid grid-cols-1 gap-6">
         <Card>
           <CardHeader>
@@ -371,7 +393,6 @@ function DashboardContent() {
           </CardContent>
         </Card>
 
-        {/* Activity Feed */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
