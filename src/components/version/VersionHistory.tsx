@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useVersionControl } from '../../hooks/useVersionControl';
 import { Card, CardContent, CardHeader, CardTitle } from '../common/Card';
 import Button from '../common/Button';
 import { History, ArrowLeft, ArrowRight, Check, X, Clock, User, GitBranch } from 'lucide-react';

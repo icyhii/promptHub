@@ -21,7 +21,6 @@ interface Version {
 interface VersionDiff {
   additions: string[];
   deletions: string[];
-  modifications: string[];
 }
 
 export function useVersionControl(promptId?: string) {
@@ -40,7 +39,7 @@ export function useVersionControl(promptId?: string) {
         .from('prompt_versions')
         .select(`
           *,
-          created_by:created_by(email)
+          created_by(email)
         `)
         .eq('prompt_id', promptId)
         .order('version_number', { ascending: false });
@@ -79,7 +78,6 @@ export function useVersionControl(promptId?: string) {
         .insert({
           prompt_id: promptId,
           content,
-          diff,
           description,
           notes,
           version_number: previousVersion ? previousVersion.version_number + 1 : 1
@@ -123,8 +121,7 @@ export function useVersionControl(promptId?: string) {
 
     return {
       additions: diffs.filter(([type]) => type === 1).map(([, text]) => text),
-      deletions: diffs.filter(([type]) => type === -1).map(([, text]) => text),
-      modifications: diffs.filter(([type]) => type === 0).map(([, text]) => text)
+      deletions: diffs.filter(([type]) => type === -1).map(([, text]) => text)
     };
   };
 
