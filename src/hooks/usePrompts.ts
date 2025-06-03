@@ -12,16 +12,25 @@ export interface Prompt {
   visibility: 'private' | 'public';
   created_at: string;
   updated_at: string;
+  forked_from?: string;
+  fork_version?: number;
 }
 
-interface PromptFilters {
-  status?: string;
-  visibility?: string;
-  tags?: string[];
-  search?: string;
+interface SearchFilters {
+  query?: string;
+  categories?: string[];
+  dateRange?: { start: Date; end: Date };
+  models?: string[];
+  complexity?: { min: number; max: number };
+  sort?: {
+    field: 'relevance' | 'date' | 'complexity';
+    direction: 'asc' | 'desc';
+  };
+  page?: number;
+  limit?: number;
 }
 
-export function usePrompts(filters?: PromptFilters) {
+export function usePrompts(filters?: SearchFilters) {
   const queryClient = useQueryClient();
 
   const {
@@ -31,26 +40,40 @@ export function usePrompts(filters?: PromptFilters) {
   } = useQuery({
     queryKey: ['prompts', filters],
     queryFn: async () => {
-      let query = supabase
+      if (filters?.query || filters?.categories || filters?.dateRange || filters?.models || filters?.complexity) {
+        const { data, error } = await supabase
+          .rpc('search_prompts', {
+            search_query: filters.query,
+            categories: filters.categories,
+            min_date: filters.dateRange?.start?.toISOString(),
+            max_date: filters.dateRange?.end?.toISOString(),
+            models: filters.models,
+            min_complexity: filters.complexity?.min,
+            max_complexity: filters.complexity?.max,
+            sort_by: filters.sort?.field || 'relevance',
+            sort_dir: filters.sort?.direction || 'desc',
+            limit_val: filters.limit || 20,
+            offset_val: ((filters.page || 1) - 1) * (filters.limit || 20)
+          });
+
+        if (error) throw error;
+        return data;
+      }
+
+      const query = supabase
         .from('prompts')
         .select(`
           *,
           creator:creator_id(id, email),
-          versions:prompt_versions(id, version_number, content, created_at)
+          versions:prompt_versions(id, version_number, content, created_at),
+          forks:prompt_forks!original_prompt_id(
+            forked_prompt:forked_prompt_id(
+              id,
+              title,
+              creator:creator_id(email)
+            )
+          )
         `);
-
-      if (filters?.status) {
-        query = query.eq('status', filters.status);
-      }
-      if (filters?.visibility) {
-        query = query.eq('visibility', filters.visibility);
-      }
-      if (filters?.tags && filters.tags.length > 0) {
-        query = query.contains('tags', filters.tags);
-      }
-      if (filters?.search) {
-        query = query.or(`title.ilike.%${filters.search}%,body.ilike.%${filters.search}%`);
-      }
 
       const { data, error } = await query.order('created_at', { ascending: false });
       if (error) throw error;
@@ -60,12 +83,10 @@ export function usePrompts(filters?: PromptFilters) {
 
   const createPrompt = useMutation({
     mutationFn: async (newPrompt: Partial<Prompt>) => {
-      // Get the current user's ID
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError) throw userError;
       if (!user) throw new Error('User must be authenticated to create prompts');
 
-      // Add the creator_id to the new prompt
       const promptWithCreator = {
         ...newPrompt,
         creator_id: user.id
@@ -77,6 +98,22 @@ export function usePrompts(filters?: PromptFilters) {
         .select()
         .single();
       
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['prompts'] });
+    }
+  });
+
+  const forkPrompt = useMutation({
+    mutationFn: async ({ promptId, title }: { promptId: string; title?: string }) => {
+      const { data, error } = await supabase
+        .rpc('fork_prompt', {
+          original_prompt_id: promptId,
+          new_title: title
+        });
+
       if (error) throw error;
       return data;
     },
@@ -122,6 +159,7 @@ export function usePrompts(filters?: PromptFilters) {
     isLoading,
     error,
     createPrompt,
+    forkPrompt,
     updatePrompt,
     deletePrompt
   };
