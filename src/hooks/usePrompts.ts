@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
+import { useAuth } from './useAuth';
 
 export interface Prompt {
   id: string;
@@ -32,14 +33,17 @@ interface SearchFilters {
 
 export function usePrompts(filters?: SearchFilters) {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const {
     data: prompts,
     isLoading,
     error
   } = useQuery({
-    queryKey: ['prompts', filters],
+    queryKey: ['prompts', filters, user?.id],
     queryFn: async () => {
+      if (!user) return [];
+
       if (filters?.query || filters?.categories || filters?.dateRange || filters?.models || filters?.complexity) {
         const { data, error } = await supabase
           .rpc('search_prompts', {
@@ -53,31 +57,31 @@ export function usePrompts(filters?: SearchFilters) {
             sort_by: filters.sort?.field || 'relevance',
             sort_dir: filters.sort?.direction || 'desc',
             limit_val: filters.limit || 20,
-            offset_val: ((filters.page || 1) - 1) * (filters.limit || 20)
+            offset_val: ((filters.page || 1) - 1) * (filters.limit || 20),
+            user_id: user.id
           });
 
         if (error) throw error;
         return data;
       }
 
-      // Simplified query that only fetches essential prompt data and creator info
       const { data, error } = await supabase
         .from('prompts')
         .select(`
           *,
           creator:creator_id(id, email)
         `)
+        .eq('creator_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       return data;
-    }
+    },
+    enabled: !!user
   });
 
   const createPrompt = useMutation({
     mutationFn: async (newPrompt: Partial<Prompt>) => {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError) throw userError;
       if (!user) throw new Error('User must be authenticated to create prompts');
 
       const promptWithCreator = {
@@ -101,10 +105,13 @@ export function usePrompts(filters?: SearchFilters) {
 
   const forkPrompt = useMutation({
     mutationFn: async ({ promptId, title }: { promptId: string; title?: string }) => {
+      if (!user) throw new Error('User must be authenticated to fork prompts');
+
       const { data, error } = await supabase
         .rpc('fork_prompt', {
           original_prompt_id: promptId,
-          new_title: title
+          new_title: title,
+          user_id: user.id
         });
 
       if (error) throw error;
@@ -117,10 +124,13 @@ export function usePrompts(filters?: SearchFilters) {
 
   const updatePrompt = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Prompt> & { id: string }) => {
+      if (!user) throw new Error('User must be authenticated to update prompts');
+
       const { data, error } = await supabase
         .from('prompts')
         .update(updates)
         .eq('id', id)
+        .eq('creator_id', user.id) // Ensure user owns the prompt
         .select()
         .single();
       
@@ -135,10 +145,13 @@ export function usePrompts(filters?: SearchFilters) {
 
   const deletePrompt = useMutation({
     mutationFn: async (id: string) => {
+      if (!user) throw new Error('User must be authenticated to delete prompts');
+
       const { error } = await supabase
         .from('prompts')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('creator_id', user.id); // Ensure user owns the prompt
       
       if (error) throw error;
     },
@@ -156,20 +169,4 @@ export function usePrompts(filters?: SearchFilters) {
     updatePrompt,
     deletePrompt
   };
-}
-
-export function usePromptVersions(promptId: string) {
-  return useQuery({
-    queryKey: ['prompt-versions', promptId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('prompt_versions')
-        .select('*')
-        .eq('prompt_id', promptId)
-        .order('version_number', { ascending: false });
-      
-      if (error) throw error;
-      return data;
-    }
-  });
 }
