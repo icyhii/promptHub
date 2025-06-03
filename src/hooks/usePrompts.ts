@@ -15,16 +15,29 @@ export interface Prompt {
   updated_at: string;
   forked_from?: string;
   fork_version?: number;
+  creator?: {
+    email: string;
+  };
+  analytics?: {
+    views: number;
+    unique_users: number;
+    likes: number;
+    shares: number;
+    comments: number;
+  }[];
+  versions?: {
+    version_number: number;
+    created_at: string;
+  }[];
 }
 
 interface SearchFilters {
-  query?: string;
-  categories?: string[];
-  dateRange?: { start: Date; end: Date };
-  models?: string[];
-  complexity?: { min: number; max: number };
+  visibility?: 'public' | 'private';
+  search?: string;
+  category?: string;
+  model?: string;
   sort?: {
-    field: 'relevance' | 'date' | 'complexity';
+    field: 'usage' | 'rating' | 'created_at';
     direction: 'asc' | 'desc';
   };
   page?: number;
@@ -44,27 +57,7 @@ export function usePrompts(filters?: SearchFilters) {
     queryFn: async () => {
       if (!user) return [];
 
-      if (filters?.query || filters?.categories || filters?.dateRange || filters?.models || filters?.complexity) {
-        const { data, error } = await supabase
-          .rpc('search_prompts', {
-            search_query: filters.query,
-            categories: filters.categories,
-            min_date: filters.dateRange?.start?.toISOString(),
-            max_date: filters.dateRange?.end?.toISOString(),
-            models: filters.models,
-            min_complexity: filters.complexity?.min,
-            max_complexity: filters.complexity?.max,
-            sort_by: filters.sort?.field || 'relevance',
-            sort_dir: filters.sort?.direction || 'desc',
-            limit_val: filters.limit || 20,
-            offset_val: ((filters.page || 1) - 1) * (filters.limit || 20)
-          });
-
-        if (error) throw error;
-        return data;
-      }
-
-      const { data, error } = await supabase
+      let query = supabase
         .from('prompts')
         .select(`
           *,
@@ -80,10 +73,46 @@ export function usePrompts(filters?: SearchFilters) {
             version_number,
             created_at
           )
-        `)
-        .eq('creator_id', user.id)
-        .order('created_at', { ascending: false });
+        `);
 
+      // Apply filters
+      if (filters?.visibility) {
+        query = query.eq('visibility', filters.visibility);
+      }
+
+      if (filters?.search) {
+        query = query.textSearch('title', filters.search);
+      }
+
+      if (filters?.category) {
+        query = query.eq('metadata->category', filters.category);
+      }
+
+      if (filters?.model) {
+        query = query.eq('metadata->model', filters.model);
+      }
+
+      // Apply sorting
+      if (filters?.sort) {
+        query = query.order(filters.sort.field, {
+          ascending: filters.sort.direction === 'asc'
+        });
+      } else {
+        query = query.order('created_at', { ascending: false });
+      }
+
+      // Apply pagination
+      if (filters?.limit) {
+        query = query
+          .limit(filters.limit)
+          .range(
+            ((filters.page || 1) - 1) * filters.limit,
+            (filters.page || 1) * filters.limit - 1
+          );
+      }
+
+      const { data, error } = await query;
+      
       if (error) throw error;
       return data;
     },
