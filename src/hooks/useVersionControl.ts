@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
-import { usePrompts } from './usePrompts';
 import { diff_match_patch } from 'diff-match-patch';
 
 const dmp = new diff_match_patch();
@@ -10,11 +9,11 @@ interface Version {
   prompt_id: string;
   version_number: number;
   content: any;
-  diff: any;
   description: string;
   notes?: string;
-  tags: string[];
-  created_by: string;
+  created_by: {
+    email: string;
+  };
   created_at: string;
   restored_from_version?: number;
 }
@@ -27,7 +26,6 @@ interface VersionDiff {
 
 export function useVersionControl(promptId?: string) {
   const queryClient = useQueryClient();
-  const { updatePrompt } = usePrompts();
 
   const {
     data: versions,
@@ -45,8 +43,7 @@ export function useVersionControl(promptId?: string) {
           created_by:created_by(email)
         `)
         .eq('prompt_id', promptId)
-        .order('version_number', { ascending: false })
-        .limit(100);
+        .order('version_number', { ascending: false });
       
       if (error) throw error;
       return data;
@@ -59,14 +56,12 @@ export function useVersionControl(promptId?: string) {
       promptId,
       content,
       description,
-      notes,
-      tags
+      notes
     }: {
       promptId: string;
       content: any;
       description: string;
       notes?: string;
-      tags?: string[];
     }) => {
       const { data: previousVersion } = await supabase
         .from('prompt_versions')
@@ -87,7 +82,6 @@ export function useVersionControl(promptId?: string) {
           diff,
           description,
           notes,
-          tags,
           version_number: previousVersion ? previousVersion.version_number + 1 : 1
         })
         .select()
@@ -103,24 +97,20 @@ export function useVersionControl(promptId?: string) {
 
   const restoreVersion = useMutation({
     mutationFn: async ({ version, description }: { version: Version; description: string }) => {
-      // First, update the prompt content
-      await updatePrompt.mutateAsync({
-        id: version.prompt_id,
-        ...version.content
-      });
-
-      // Then create a new version entry marking it as restored
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('prompt_versions')
         .insert({
           prompt_id: version.prompt_id,
           content: version.content,
-          description,
+          description: `Restored from version ${version.version_number}: ${description}`,
           restored_from_version: version.version_number,
           version_number: (versions?.[0]?.version_number || 0) + 1
-        });
+        })
+        .select()
+        .single();
 
       if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['versions', promptId] });

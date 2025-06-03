@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { useVersionControl } from '../../hooks/useVersionControl';
 import { Card, CardContent, CardHeader, CardTitle } from '../common/Card';
 import Button from '../common/Button';
-import { History, ArrowLeft, ArrowRight, Check, X } from 'lucide-react';
+import { History, ArrowLeft, ArrowRight, Check, X, Clock, User, GitBranch } from 'lucide-react';
 import { format } from 'date-fns';
+import toast from 'react-hot-toast';
 
 interface VersionHistoryProps {
   promptId: string;
@@ -28,13 +29,19 @@ export default function VersionHistory({ promptId, onRestore }: VersionHistoryPr
       });
       onRestore(selectedVersion);
       setSelectedVersion(null);
+      toast.success('Version restored successfully');
     } catch (error) {
+      toast.error('Failed to restore version');
       console.error('Failed to restore version:', error);
     }
   };
 
   if (isLoading) {
-    return <div>Loading version history...</div>;
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin h-8 w-8 border-t-2 border-b-2 border-primary-500 rounded-full"></div>
+      </div>
+    );
   }
 
   if (!versions?.length) {
@@ -80,20 +87,31 @@ export default function VersionHistory({ promptId, onRestore }: VersionHistoryPr
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
+                <div className="flex items-center justify-between text-sm text-gray-500">
+                  <div className="flex items-center">
+                    <User size={16} className="mr-2" />
+                    <span>{selectedVersion.created_by.email}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <Clock size={16} className="mr-2" />
+                    <span>{format(new Date(selectedVersion.created_at), 'MMM d, yyyy h:mm a')}</span>
+                  </div>
+                </div>
+
                 <div>
-                  <h4 className="font-medium text-gray-700">Description</h4>
+                  <h4 className="font-medium text-gray-700 mb-2">Description</h4>
                   <p className="text-gray-600">{selectedVersion.description}</p>
                 </div>
 
                 {selectedVersion.notes && (
                   <div>
-                    <h4 className="font-medium text-gray-700">Notes</h4>
+                    <h4 className="font-medium text-gray-700 mb-2">Notes</h4>
                     <p className="text-gray-600">{selectedVersion.notes}</p>
                   </div>
                 )}
 
                 <div>
-                  <h4 className="font-medium text-gray-700">Changes</h4>
+                  <h4 className="font-medium text-gray-700 mb-2">Changes</h4>
                   {showDiff && selectedVersion.diff ? (
                     <div className="mt-2 space-y-2">
                       {selectedVersion.diff.additions.map((addition: string, i: number) => (
@@ -104,11 +122,6 @@ export default function VersionHistory({ promptId, onRestore }: VersionHistoryPr
                       {selectedVersion.diff.deletions.map((deletion: string, i: number) => (
                         <div key={i} className="bg-red-50 text-red-700 p-2 rounded">
                           <span className="font-mono">- {deletion}</span>
-                        </div>
-                      ))}
-                      {selectedVersion.diff.modifications.map((modification: string, i: number) => (
-                        <div key={i} className="bg-yellow-50 text-yellow-700 p-2 rounded">
-                          <span className="font-mono">~ {modification}</span>
                         </div>
                       ))}
                     </div>
@@ -132,8 +145,18 @@ export default function VersionHistory({ promptId, onRestore }: VersionHistoryPr
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="font-medium">Version {version.version_number}</h3>
-                  <p className="text-sm text-gray-500">{version.description}</p>
+                  <div className="flex items-center">
+                    <h3 className="font-medium">Version {version.version_number}</h3>
+                    {version.restored_from_version && (
+                      <div className="ml-2 flex items-center text-gray-500">
+                        <GitBranch size={14} className="mr-1" />
+                        <span className="text-sm">
+                          Restored from v{version.restored_from_version}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-500 mt-1">{version.description}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-gray-500">
@@ -144,19 +167,6 @@ export default function VersionHistory({ promptId, onRestore }: VersionHistoryPr
                   </p>
                 </div>
               </div>
-
-              {version.tags?.length > 0 && (
-                <div className="mt-2 flex gap-1">
-                  {version.tags.map((tag: string) => (
-                    <span
-                      key={tag}
-                      className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
             </div>
           ))}
         </div>
