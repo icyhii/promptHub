@@ -51,18 +51,18 @@ function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetError
 function DashboardContent() {
   const navigate = useNavigate();
   const { prompts, isLoading: isPromptsLoading } = usePrompts();
-  const { data: analytics, isLoading: isAnalyticsLoading } = useAnalytics(7); // Last 7 days
+  const { data: analytics, isLoading: isAnalyticsLoading, refetch } = useAnalytics(7); // Last 7 days
   const { userTeams, isLoading: isTeamsLoading } = useTeam();
   const [activityFilter, setActivityFilter] = useState<string | null>(null);
 
   // Refetch analytics every 30 seconds
   useEffect(() => {
     const interval = setInterval(() => {
-      analytics?.refetch();
+      refetch();
     }, 30000);
 
     return () => clearInterval(interval);
-  }, [analytics]);
+  }, [refetch]);
 
   if (isPromptsLoading || isAnalyticsLoading || isTeamsLoading) {
     return <LoadingSpinner />;
