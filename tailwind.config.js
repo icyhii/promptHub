@@ -56,6 +56,7 @@ export default {
         fadeIn: 'fadeIn 0.5s ease-in-out',
         slideIn: 'slideIn 0.3s ease-out',
         pulse: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        shimmer: 'shimmer 1.5s infinite',
       },
       keyframes: {
         fadeIn: {
@@ -65,6 +66,10 @@ export default {
         slideIn: {
           '0%': { transform: 'translateX(-10px)', opacity: '0' },
           '100%': { transform: 'translateX(0)', opacity: '1' },
+        },
+        shimmer: {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(100%)' },
         },
       },
     },
