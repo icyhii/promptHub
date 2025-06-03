@@ -61,6 +61,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         disabled={disabled || isLoading}
         aria-label={accessibleName}
         aria-disabled={disabled || isLoading}
+        aria-busy={isLoading}
         {...props}
       >
         {isLoading && (

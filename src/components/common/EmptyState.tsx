@@ -74,10 +74,14 @@ export default function EmptyState({
 
       {tips && tips.length > 0 && (
         <div className="text-left w-full max-w-md">
-          <h3 className="text-sm font-medium text-textPrimary mb-2">
+          <h3 className="text-sm font-medium text-textPrimary mb-2" id="helpful-tips">
             Helpful Tips:
           </h3>
-          <ul className="list-disc list-inside space-y-1" role="list">
+          <ul 
+            className="list-disc list-inside space-y-1" 
+            role="list"
+            aria-labelledby="helpful-tips"
+          >
             {tips.map((tip, index) => (
               <li key={index} className="text-sm text-textSecondary">
                 {tip}

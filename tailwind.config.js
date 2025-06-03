@@ -8,15 +8,15 @@ export default {
         background: '#F8F9FA',
         textPrimary: '#1F2937',
         textSecondary: '#6B7280',
-        accentBlue: '#3B82F6',
-        accentPurple: '#8B5CF6',
-        accentGreen: '#10B981',
-        accentRed: '#EF4444',
+        accentBlue: '#2563EB', // Updated for better contrast
+        accentPurple: '#7C3AED',
+        accentGreen: '#059669',
+        accentRed: '#DC2626',
         neutralGray: {
           DEFAULT: '#D1D5DB',
           light: '#E5E7EB',
-          medium: '#9CA3AF',
-          dark: '#4B5563',
+          medium: '#6B7280', // Updated for better contrast
+          dark: '#374151',
         },
       },
       fontFamily: {
