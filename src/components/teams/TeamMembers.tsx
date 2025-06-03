@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useTeam } from '../../hooks/useTeam';
 import Button from '../common/Button';
-import { UserPlus, Shield, Clock } from 'lucide-react';
+import { Card, CardContent } from '../common/Card';
+import { UserPlus, Shield, Clock, MoreHorizontal, X, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface TeamMembersProps {
@@ -9,16 +10,17 @@ interface TeamMembersProps {
 }
 
 export default function TeamMembers({ teamId }: TeamMembersProps) {
-  const [inviteEmail, setInviteEmail] = useState('');
   const [showInviteForm, setShowInviteForm] = useState(false);
-  const { team, inviteMember, removeMember } = useTeam(teamId);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [selectedRole, setSelectedRole] = useState<'editor' | 'viewer'>('editor');
+  const { team, inviteMember, removeMember, updateMemberRole } = useTeam(teamId);
 
   const handleInvite = async () => {
     try {
       await inviteMember.mutateAsync({
         teamId,
         email: inviteEmail,
-        role: 'member'
+        role: selectedRole
       });
       toast.success('Invitation sent successfully');
       setInviteEmail('');
@@ -37,6 +39,15 @@ export default function TeamMembers({ teamId }: TeamMembersProps) {
     }
   };
 
+  const handleRoleUpdate = async (userId: string, newRole: 'admin' | 'editor' | 'viewer') => {
+    try {
+      await updateMemberRole.mutateAsync({ teamId, userId, role: newRole });
+      toast.success('Role updated successfully');
+    } catch (error) {
+      toast.error('Failed to update role');
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -51,20 +62,57 @@ export default function TeamMembers({ teamId }: TeamMembersProps) {
       </div>
 
       {showInviteForm && (
-        <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-          <div className="flex space-x-2">
-            <input
-              type="email"
-              value={inviteEmail}
-              onChange={(e) => setInviteEmail(e.target.value)}
-              placeholder="Enter email address"
-              className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md"
-            />
-            <Button onClick={handleInvite} disabled={!inviteEmail}>
-              Send Invite
-            </Button>
-          </div>
-        </div>
+        <Card>
+          <CardContent className="p-4">
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  placeholder="Enter email address"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Role
+                </label>
+                <select
+                  value={selectedRole}
+                  onChange={(e) => setSelectedRole(e.target.value as 'editor' | 'viewer')}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="editor">Editor</option>
+                  <option value="viewer">Viewer</option>
+                </select>
+              </div>
+
+              <div className="flex justify-end space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  leftIcon={<X size={16} />}
+                  onClick={() => setShowInviteForm(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  leftIcon={<Check size={16} />}
+                  onClick={handleInvite}
+                  disabled={!inviteEmail}
+                >
+                  Send Invite
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       <div className="space-y-2">
@@ -88,13 +136,39 @@ export default function TeamMembers({ teamId }: TeamMembersProps) {
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                leftIcon={<Shield size={14} />}
-              >
-                {member.role}
-              </Button>
+              <div className="relative">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  leftIcon={<Shield size={14} />}
+                >
+                  {member.role}
+                </Button>
+                {member.role !== 'owner' && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 z-10 hidden group-hover:block">
+                    <div className="py-1">
+                      <button
+                        className="block w-full px-4 py-2 text-sm text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        onClick={() => handleRoleUpdate(member.user_id, 'admin')}
+                      >
+                        Make Admin
+                      </button>
+                      <button
+                        className="block w-full px-4 py-2 text-sm text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        onClick={() => handleRoleUpdate(member.user_id, 'editor')}
+                      >
+                        Make Editor
+                      </button>
+                      <button
+                        className="block w-full px-4 py-2 text-sm text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        onClick={() => handleRoleUpdate(member.user_id, 'viewer')}
+                      >
+                        Make Viewer
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
               {member.role !== 'owner' && (
                 <Button
                   variant="outline"

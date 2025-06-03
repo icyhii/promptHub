@@ -24,13 +24,15 @@
     "react-router-dom": "^6.20.1",
     "react-tag-input": "^6.10.6",
     "tailwind-merge": "^2.1.0",
-    "use-debounce": "^10.0.4"
+    "use-debounce": "^10.0.4",
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
     "@types/diff-match-patch": "^1.0.4",
     "@types/react": "^18.2.42",
     "@types/react-dom": "^18.2.17",
     "@types/react-tag-input": "^6.6.6",
+    "@types/uuid": "^9.0.7",
     "@typescript-eslint/eslint-plugin": "^6.13.2",
     "@typescript-eslint/parser": "^6.13.2",
     "@vitejs/plugin-react": "^4.2.1",
