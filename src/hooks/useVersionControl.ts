@@ -80,6 +80,7 @@ export function useVersionControl(promptId?: string) {
           content,
           description,
           notes,
+          diff,
           version_number: previousVersion ? previousVersion.version_number + 1 : 1
         })
         .select()
