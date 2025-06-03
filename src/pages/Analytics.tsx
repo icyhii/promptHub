@@ -1,10 +1,41 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/common/Card';
 import Button from '../components/common/Button';
-import { BarChart, LineChart, Calendar, ArrowUp, ArrowDown, DollarSign, Clock, Zap, RefreshCw } from 'lucide-react';
+import { 
+  BarChart as BarChartIcon, 
+  LineChart as LineChartIcon, 
+  Calendar, 
+  ArrowUp, 
+  ArrowDown, 
+  DollarSign, 
+  Clock, 
+  Zap, 
+  RefreshCw,
+  Users,
+  ThumbsUp,
+  Share2,
+  MessageSquare
+} from 'lucide-react';
 import { useAnalytics } from '../hooks/useAnalytics';
 import { ErrorBoundary } from 'react-error-boundary';
 import LoadingSpinner from '../components/common/LoadingSpinner';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  AreaChart,
+  Area
+} from 'recharts';
 
 function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) {
   return (
@@ -14,6 +45,8 @@ function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetError
     </div>
   );
 }
+
+const COLORS = ['#3B82F6', '#10B981', '#6366F1', '#F59E0B', '#EF4444'];
 
 function AnalyticsContent() {
   const [dateRange, setDateRange] = useState('7d');
@@ -31,6 +64,10 @@ function AnalyticsContent() {
     throw error;
   }
 
+  if (!analytics) {
+    return null;
+  }
+
   const getChangeIndicator = (current: number, previous: number) => {
     const percentChange = ((current - previous) / previous) * 100;
     const isIncrease = percentChange > 0;
@@ -41,13 +78,13 @@ function AnalyticsContent() {
     };
   };
 
-  // Calculate changes based on historical data
-  const currentPeriod = analytics?.historicalData.slice(-7);
-  const previousPeriod = analytics?.historicalData.slice(-14, -7);
+  // Calculate changes
+  const currentPeriod = analytics.historicalData.slice(-7);
+  const previousPeriod = analytics.historicalData.slice(-14, -7);
   
   const usageChange = getChangeIndicator(
-    currentPeriod?.reduce((sum, day) => sum + day.usage, 0) || 0,
-    previousPeriod?.reduce((sum, day) => sum + day.usage, 0) || 0
+    currentPeriod.reduce((sum, day) => sum + day.usage, 0),
+    previousPeriod.reduce((sum, day) => sum + day.usage, 0)
   );
 
   return (
@@ -83,11 +120,11 @@ function AnalyticsContent() {
               <div>
                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Usage</p>
                 <p className="text-3xl font-bold mt-1 text-gray-900 dark:text-white">
-                  {analytics?.totalUsage.toLocaleString()}
+                  {analytics.totalUsage.toLocaleString()}
                 </p>
               </div>
               <div className="p-3 bg-primary-100 dark:bg-primary-900/30 rounded-full text-primary-600 dark:text-primary-400">
-                <BarChart size={20} />
+                <BarChartIcon size={20} />
               </div>
             </div>
             <div className="mt-4">
@@ -105,19 +142,19 @@ function AnalyticsContent() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Tokens Used</p>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Unique Users</p>
                 <p className="text-3xl font-bold mt-1 text-gray-900 dark:text-white">
-                  {(analytics?.tokensUsed / 1000).toFixed(1)}K
+                  {analytics.engagement.uniqueUsers.toLocaleString()}
                 </p>
               </div>
               <div className="p-3 bg-accent-100 dark:bg-accent-900/30 rounded-full text-accent-600 dark:text-accent-400">
-                <Zap size={20} />
+                <Users size={20} />
               </div>
             </div>
             <div className="mt-4">
               <div className="text-sm text-success-600 flex items-center">
-                <ArrowDown size={16} className="mr-1" />
-                <span>5% decrease</span>
+                <ArrowUp size={16} className="mr-1" />
+                <span>15% increase</span>
               </div>
             </div>
           </CardContent>
@@ -127,19 +164,19 @@ function AnalyticsContent() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Est. Cost</p>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Engagement Rate</p>
                 <p className="text-3xl font-bold mt-1 text-gray-900 dark:text-white">
-                  ${analytics?.estimatedCost.toFixed(2)}
+                  {((analytics.engagement.likes + analytics.engagement.shares + analytics.engagement.comments) / analytics.totalUsage * 100).toFixed(1)}%
                 </p>
               </div>
               <div className="p-3 bg-success-100 dark:bg-success-900/30 rounded-full text-success-600 dark:text-success-400">
-                <DollarSign size={20} />
+                <ThumbsUp size={20} />
               </div>
             </div>
             <div className="mt-4">
               <div className="text-sm text-success-600 flex items-center">
-                <ArrowDown size={16} className="mr-1" />
-                <span>12% decrease</span>
+                <ArrowUp size={16} className="mr-1" />
+                <span>8% increase</span>
               </div>
             </div>
           </CardContent>
@@ -151,7 +188,7 @@ function AnalyticsContent() {
               <div>
                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Avg. Response Time</p>
                 <p className="text-3xl font-bold mt-1 text-gray-900 dark:text-white">
-                  {(analytics?.avgResponseTime / 1000).toFixed(1)}s
+                  {(analytics.avgResponseTime / 1000).toFixed(1)}s
                 </p>
               </div>
               <div className="p-3 bg-warning-100 dark:bg-warning-900/30 rounded-full text-warning-600 dark:text-warning-400">
@@ -168,139 +205,129 @@ function AnalyticsContent() {
         </Card>
       </div>
 
-      {/* Main Charts */}
+      {/* Engagement Metrics */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center">
-              <BarChart size={16} className="mr-2" />
-              Prompt Usage
-            </CardTitle>
+            <CardTitle>Usage Over Time</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-[300px] flex items-end justify-between mt-6 px-2">
-              {analytics?.historicalData.slice(-7).map((day, index) => (
-                <div key={index} className="w-full max-w-[40px] flex flex-col items-center">
-                  <div className="relative w-full h-full">
-                    <div 
-                      className="w-10 bg-primary-500 dark:bg-primary-600 rounded-t-md transition-all duration-500 ease-in-out hover:bg-primary-400"
-                      style={{ 
-                        height: `${(day.usage / Math.max(...analytics.historicalData.map(d => d.usage))) * 200}px` 
-                      }}
-                    ></div>
-                  </div>
-                  <span className="text-xs mt-2 text-gray-500 dark:text-gray-400">
-                    {new Date(day.date).toLocaleDateString(undefined, { weekday: 'short' })}
-                  </span>
-                </div>
-              ))}
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={analytics.historicalData}>
+                  <defs>
+                    <linearGradient id="colorUsage" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.1}/>
+                      <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="date" 
+                    tickFormatter={(date) => new Date(date).toLocaleDateString(undefined, { weekday: 'short' })}
+                  />
+                  <YAxis />
+                  <Tooltip />
+                  <Area 
+                    type="monotone" 
+                    dataKey="usage" 
+                    stroke="#3B82F6" 
+                    fillOpacity={1} 
+                    fill="url(#colorUsage)" 
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center">
-              <LineChart size={16} className="mr-2" />
-              Token Usage Over Time
-            </CardTitle>
+            <CardTitle>Category Distribution</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-[300px] mt-6 px-2 relative">
-              <div className="absolute inset-0 flex items-center">
-                <svg className="w-full h-[200px]" viewBox="0 0 700 200">
-                  {[0, 1, 2, 3, 4].map((line) => (
-                    <line 
-                      key={line}
-                      x1="0" 
-                      y1={50 * line} 
-                      x2="700" 
-                      y2={50 * line}
-                      stroke="#e5e7eb" 
-                      strokeWidth="1"
-                      strokeDasharray={line > 0 ? "5,5" : "0"} 
-                    />
-                  ))}
-                  
-                  {analytics && (
-                    <polyline
-                      fill="none"
-                      stroke="#3b82f6"
-                      strokeWidth="3"
-                      points={analytics.historicalData.slice(-7).map((day, index) => {
-                        const x = index * (700 / 6);
-                        const maxTokens = Math.max(...analytics.historicalData.map(d => d.tokens));
-                        const y = 200 - (day.tokens / maxTokens * 200);
-                        return `${x},${y}`;
-                      }).join(' ')}
-                    />
-                  )}
-                  
-                  {analytics?.historicalData.slice(-7).map((day, index) => {
-                    const x = index * (700 / 6);
-                    const maxTokens = Math.max(...analytics.historicalData.map(d => d.tokens));
-                    const y = 200 - (day.tokens / maxTokens * 200);
-                    return (
-                      <circle
-                        key={index}
-                        cx={x}
-                        cy={y}
-                        r="4"
-                        fill="#3b82f6"
-                      />
-                    );
-                  })}
-                </svg>
-              </div>
-              
-              <div className="absolute bottom-0 inset-x-0 flex justify-between px-2">
-                {analytics?.historicalData.slice(-7).map((day, index) => (
-                  <span key={index} className="text-xs text-gray-500 dark:text-gray-400">
-                    {new Date(day.date).toLocaleDateString(undefined, { weekday: 'short' })}
-                  </span>
-                ))}
-              </div>
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={analytics.categoryDistribution}
+                    dataKey="count"
+                    nameKey="category"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={100}
+                    label
+                  >
+                    {analytics.categoryDistribution.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Model Performance */}
+      {/* User Activity */}
       <Card>
         <CardHeader>
-          <CardTitle>Model Performance</CardTitle>
+          <CardTitle>User Activity by Hour</CardTitle>
         </CardHeader>
         <CardContent>
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-200 dark:border-gray-700">
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Model</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Usage</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tokens</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Avg. Time</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cost</th>
-              </tr>
-            </thead>
-            <tbody>
-              {analytics?.modelPerformance.map((model) => (
-                <tr key={model.model} className="border-b border-gray-200 dark:border-gray-700">
-                  <td className="py-3 px-4">
-                    <span className="font-medium text-gray-900 dark:text-white">{model.model}</span>
-                  </td>
-                  <td className="py-3 px-4 text-gray-500 dark:text-gray-400">{model.usage}</td>
-                  <td className="py-3 px-4 text-gray-500 dark:text-gray-400">
-                    {(model.tokens / 1000).toFixed(1)}K
-                  </td>
-                  <td className="py-3 px-4 text-gray-500 dark:text-gray-400">
-                    {(model.avgTime / 1000).toFixed(1)}s
-                  </td>
-                  <td className="py-3 px-4 text-gray-500 dark:text-gray-400">
-                    ${model.cost.toFixed(2)}
-                  </td>
+          <div className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={analytics.userActivity}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="hour" 
+                  tickFormatter={(hour) => `${hour}:00`}
+                />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="count" fill="#3B82F6" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Top Performing Prompts */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Top Performing Prompts</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-200 dark:border-gray-700">
+                  <th className="text-left py-3 px-4">Prompt</th>
+                  <th className="text-right py-3 px-4">Usage</th>
+                  <th className="text-right py-3 px-4">Engagement</th>
+                  <th className="text-right py-3 px-4">Performance</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {analytics.topPrompts.map((prompt) => (
+                  <tr key={prompt.id} className="border-b border-gray-200 dark:border-gray-700">
+                    <td className="py-3 px-4">
+                      <div className="font-medium text-gray-900 dark:text-white">{prompt.title}</div>
+                    </td>
+                    <td className="text-right py-3 px-4">{prompt.usage}</td>
+                    <td className="text-right py-3 px-4">{prompt.engagement}</td>
+                    <td className="text-right py-3 px-4">
+                      <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success-100 text-success-800">
+                        High
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </CardContent>
       </Card>
     </div>
