@@ -3,9 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Button from '../components/common/Button';
 import TagInput from '../components/common/TagInput';
 import CollapsiblePanel from '../components/common/CollapsiblePanel';
+import VersionHistory from '../components/version/VersionHistory';
 import { usePrompts } from '../hooks/usePrompts';
+import { useVersionControl } from '../hooks/useVersionControl';
 import { useAutosave, type SaveStatus } from '../hooks/useAutosave';
-import { ArrowLeft, Copy, MoreHorizontal, ChevronDown, Save, Check, AlertCircle, Clock } from 'lucide-react';
+import { ArrowLeft, Copy, MoreHorizontal, ChevronDown, Save, Check, AlertCircle, Clock, GitBranch } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import ReactQuill from 'react-quill';
@@ -48,45 +50,44 @@ export default function PromptDetail() {
   const [selectedModel, setSelectedModel] = useState('GPT-4');
   const [parallelText, setParallelText] = useState('Parallel text goes here');
   const [allPanelsExpanded, setAllPanelsExpanded] = useState(true);
+  const [changeDescription, setChangeDescription] = useState('');
+  const [activeBranch, setActiveBranch] = useState<string | null>(null);
 
-  const { prompts, createPrompt, updatePrompt } = usePrompts();
+  const { prompts } = usePrompts();
+  const { createVersion, versions, branches } = useVersionControl(id);
 
   // Calculate token and character counts
   const charCount = promptContent.length;
   const wordCount = promptContent.trim().split(/\s+/).length;
-  const estimatedTokens = Math.ceil(wordCount * 1.3); // Rough estimation
+  const estimatedTokens = Math.ceil(wordCount * 1.3);
   const tokenLimit = MODEL_TOKEN_LIMITS[selectedModel as keyof typeof MODEL_TOKEN_LIMITS];
 
   const handleSave = useCallback(async () => {
     try {
-      const promptData = {
-        title: promptTitle,
-        body: promptContent,
-        tags: promptTags.map(tag => tag.text),
-        status: 'draft',
-        visibility: 'private',
-        metadata: {
-          model: selectedModel,
-          version: '1.0'
-        }
-      };
-
-      if (isNewPrompt) {
-        await createPrompt.mutateAsync(promptData);
-        toast.success('Prompt created successfully');
-        navigate('/prompts');
-      } else if (id) {
-        await updatePrompt.mutateAsync({
-          id,
-          ...promptData
-        });
-        toast.success('Prompt updated successfully');
+      if (!changeDescription) {
+        toast.error('Please provide a description of your changes');
+        return;
       }
+
+      await createVersion.mutateAsync({
+        content: {
+          title: promptTitle,
+          body: promptContent,
+          tags: promptTags.map(tag => tag.text),
+          model: selectedModel,
+          parallelText
+        },
+        changeLog: changeDescription,
+        branchId: activeBranch
+      });
+
+      toast.success('Version saved successfully');
+      setChangeDescription('');
     } catch (error) {
-      toast.error(isNewPrompt ? 'Failed to create prompt' : 'Failed to update prompt');
-      throw error; // Re-throw for autosave handling
+      toast.error('Failed to save version');
+      throw error;
     }
-  }, [promptTitle, promptContent, promptTags, selectedModel, id, isNewPrompt, createPrompt, updatePrompt, navigate]);
+  }, [promptTitle, promptContent, promptTags, selectedModel, parallelText, changeDescription, activeBranch, createVersion]);
 
   // Autosave functionality
   const { saveStatus } = useAutosave({
@@ -170,6 +171,14 @@ export default function PromptDetail() {
           </div>
         </div>
         <div className="flex items-center space-x-2">
+          {activeBranch && (
+            <div className="flex items-center text-sm text-gray-600 mr-4">
+              <GitBranch size={16} className="mr-1" />
+              <span>
+                {branches?.find(b => b.id === activeBranch)?.name || 'Unknown Branch'}
+              </span>
+            </div>
+          )}
           <Button
             variant="outline"
             onClick={() => setAllPanelsExpanded(!allPanelsExpanded)}
@@ -233,6 +242,19 @@ export default function PromptDetail() {
             </CollapsiblePanel>
 
             <CollapsiblePanel
+              title="Change Description"
+              panelKey="change-description"
+              isExpandedProp={allPanelsExpanded}
+            >
+              <textarea
+                value={changeDescription}
+                onChange={(e) => setChangeDescription(e.target.value)}
+                placeholder="Describe your changes..."
+                className="w-full h-24 p-3 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+              />
+            </CollapsiblePanel>
+
+            <CollapsiblePanel
               title="Example Input"
               panelKey="example-input"
               isExpandedProp={allPanelsExpanded}
@@ -266,9 +288,23 @@ export default function PromptDetail() {
               panelKey="version-history"
               isExpandedProp={allPanelsExpanded}
             >
-              <div className="text-gray-600">
-                No previous versions
-              </div>
+              {versions && versions.length > 0 ? (
+                <VersionHistory
+                  promptId={id!}
+                  onRestore={(version) => {
+                    setPromptContent(version.content.body);
+                    setPromptTitle(version.content.title);
+                    setPromptTags(version.content.tags.map((tag: string) => ({ id: tag, text: tag })));
+                    setSelectedModel(version.content.model);
+                    setParallelText(version.content.parallelText);
+                    toast.success('Version restored');
+                  }}
+                />
+              ) : (
+                <div className="text-gray-600">
+                  No previous versions
+                </div>
+              )}
             </CollapsiblePanel>
           </div>
         </div>
