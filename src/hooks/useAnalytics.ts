@@ -148,28 +148,32 @@ export function useAnalytics(days: number = 30) {
           uniqueUsers: new Set(engagementData?.map(e => e.user_id)).size || 0
         };
 
-        // Get top prompts
-        const { data: topPromptsData, error: topPromptsError } = await supabase
+        // Get prompts and calculate top prompts client-side
+        const { data: promptsData, error: promptsError } = await supabase
           .from('prompts')
-          .select(`
-            id,
-            title,
-            (
-              SELECT COUNT(*) 
-              FROM user_engagement 
-              WHERE prompt_id = prompts.id
-            ) as usage,
-            (
-              SELECT COUNT(*) 
-              FROM user_engagement 
-              WHERE prompt_id = prompts.id 
-              AND action_type IN ('like', 'share', 'comment')
-            ) as engagement
-          `)
-          .order('usage', { ascending: false })
-          .limit(5);
+          .select('id, title');
 
-        if (topPromptsError) throw topPromptsError;
+        if (promptsError) throw promptsError;
+
+        // Calculate usage and engagement for each prompt
+        const promptStats = promptsData?.map(prompt => {
+          const promptEngagement = engagementData?.filter(e => e.prompt_id === prompt.id) || [];
+          const usage = promptEngagement.length;
+          const engagement = promptEngagement.filter(e => 
+            ['like', 'share', 'comment'].includes(e.action_type)
+          ).length;
+
+          return {
+            ...prompt,
+            usage,
+            engagement
+          };
+        }) || [];
+
+        // Sort by usage and get top 5
+        const topPrompts = promptStats
+          .sort((a, b) => b.usage - a.usage)
+          .slice(0, 5);
 
         // Calculate user activity by hour
         const userActivity = Array.from({ length: 24 }, (_, hour) => ({
@@ -205,7 +209,7 @@ export function useAnalytics(days: number = 30) {
           historicalData,
           modelPerformance,
           engagement,
-          topPrompts: topPromptsData || [],
+          topPrompts,
           categoryDistribution,
           userActivity
         };
