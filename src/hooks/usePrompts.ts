@@ -60,22 +60,15 @@ export function usePrompts(filters?: SearchFilters) {
         return data;
       }
 
-      const query = supabase
+      // Simplified query that only fetches essential prompt data and creator info
+      const { data, error } = await supabase
         .from('prompts')
         .select(`
           *,
-          creator:creator_id(id, email),
-          versions:prompt_versions(id, version_number, content, created_at),
-          forks:prompt_forks!original_prompt_id(
-            forked_prompt:forked_prompt_id(
-              id,
-              title,
-              creator:creator_id(email)
-            )
-          )
-        `);
+          creator:creator_id(id, email)
+        `)
+        .order('created_at', { ascending: false });
 
-      const { data, error } = await query.order('created_at', { ascending: false });
       if (error) throw error;
       return data;
     }
