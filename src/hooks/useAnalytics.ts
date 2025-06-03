@@ -54,135 +54,160 @@ export function useAnalytics(days: number = 30) {
     queryKey: ['analytics', days],
     queryFn: async (): Promise<AnalyticsData> => {
       try {
-        // First verify Supabase connection
         await verifySupabaseConnection();
         
         const startDate = startOfDay(subDays(new Date(), days));
         
-        // Fetch analytics data with error handling
+        // Fetch analytics data
         const { data: analyticsData, error: analyticsError } = await supabase
           .from('prompt_analytics')
           .select('*')
           .gte('date', startDate.toISOString());
 
-        if (analyticsError) {
-          console.error('Analytics fetch error:', analyticsError);
-          throw analyticsError;
-        }
+        if (analyticsError) throw analyticsError;
 
-        if (!analyticsData) {
-          console.warn('No analytics data returned');
-          return {
-            totalUsage: 0,
-            tokensUsed: 0,
-            estimatedCost: 0,
-            avgResponseTime: 0,
-            historicalData: [],
-            modelPerformance: [],
-            engagement: {
-              views: 0,
-              likes: 0,
-              shares: 0,
-              comments: 0,
-              uniqueUsers: 0
-            },
-            topPrompts: [],
-            categoryDistribution: [],
-            userActivity: []
-          };
-        }
+        // Fetch token usage data
+        const { data: tokenData, error: tokenError } = await supabase
+          .from('token_usage_logs')
+          .select('*')
+          .gte('created_at', startDate.toISOString());
 
-        // Fetch engagement data with error handling
+        if (tokenError) throw tokenError;
+
+        // Fetch execution data
+        const { data: executionData, error: executionError } = await supabase
+          .from('prompt_executions')
+          .select('*')
+          .gte('created_at', startDate.toISOString());
+
+        if (executionError) throw executionError;
+
+        // Fetch engagement data
         const { data: engagementData, error: engagementError } = await supabase
           .from('user_engagement')
           .select('*')
           .gte('created_at', startDate.toISOString());
 
-        if (engagementError) {
-          console.error('Engagement fetch error:', engagementError);
-          throw engagementError;
-        }
+        if (engagementError) throw engagementError;
 
-        // Process analytics data
-        const totalUsage = analyticsData.reduce((sum, day) => sum + (day.views || 0), 0);
-        const uniqueUsers = new Set(engagementData?.map(e => e.user_id) || []).size;
+        // Calculate total usage metrics
+        const totalUsage = analyticsData?.reduce((sum, day) => sum + (day.views || 0), 0) || 0;
+        const tokensUsed = tokenData?.reduce((sum, log) => sum + log.token_count, 0) || 0;
+        const avgResponseTime = executionData?.reduce((sum, exec) => sum + (exec.runtime_stats?.duration_ms || 0), 0) / (executionData?.length || 1);
 
-        // Calculate engagement metrics
-        const engagement = {
-          views: analyticsData.reduce((sum, day) => sum + (day.views || 0), 0),
-          likes: analyticsData.reduce((sum, day) => sum + (day.likes || 0), 0),
-          shares: analyticsData.reduce((sum, day) => sum + (day.shares || 0), 0),
-          comments: analyticsData.reduce((sum, day) => sum + (day.comments || 0), 0),
-          uniqueUsers
-        };
+        // Calculate cost (example rate: $0.002 per 1000 tokens)
+        const estimatedCost = (tokensUsed / 1000) * 0.002;
 
-        // Generate historical data
+        // Process historical data
         const historicalData = Array.from({ length: days }, (_, i) => {
           const date = format(subDays(new Date(), i), 'yyyy-MM-dd');
-          const dayData = analyticsData.find(d => format(new Date(d.date), 'yyyy-MM-dd') === date);
+          const dayAnalytics = analyticsData?.find(d => format(new Date(d.date), 'yyyy-MM-dd') === date);
+          const dayTokens = tokenData?.filter(t => 
+            format(new Date(t.created_at), 'yyyy-MM-dd') === date
+          ).reduce((sum, t) => sum + t.token_count, 0);
+
           return {
             date,
-            usage: dayData?.views || 0,
-            tokens: dayData?.unique_users || 0
+            usage: dayAnalytics?.views || 0,
+            tokens: dayTokens || 0
           };
         }).reverse();
 
-        // Calculate user activity by hour
-        const userActivity = Array.from({ length: 24 }, (_, hour) => {
-          const count = engagementData?.filter(e => 
-            new Date(e.created_at).getHours() === hour
-          ).length || 0;
-          return { hour, count };
-        });
-
-        // Mock data for demonstration
-        const mockData = {
-          tokensUsed: Math.floor(totalUsage * 1.5),
-          estimatedCost: totalUsage * 0.0001,
-          avgResponseTime: 800,
-          modelPerformance: [
-            {
-              model: 'GPT-4',
-              usage: Math.floor(totalUsage * 0.6),
-              tokens: Math.floor(totalUsage * 0.9),
-              avgTime: 900,
-              cost: totalUsage * 0.00006
-            },
-            {
-              model: 'Claude-3',
-              usage: Math.floor(totalUsage * 0.3),
-              tokens: Math.floor(totalUsage * 0.45),
-              avgTime: 700,
-              cost: totalUsage * 0.00003
-            },
-            {
-              model: 'Gemini',
-              usage: Math.floor(totalUsage * 0.1),
-              tokens: Math.floor(totalUsage * 0.15),
-              avgTime: 600,
-              cost: totalUsage * 0.00001
+        // Calculate model performance
+        const modelPerformance = Object.entries(
+          executionData?.reduce((acc, exec) => {
+            const model = exec.model;
+            if (!acc[model]) {
+              acc[model] = {
+                usage: 0,
+                tokens: 0,
+                totalTime: 0,
+                count: 0
+              };
             }
-          ],
-          topPrompts: [
-            { id: '1', title: 'Customer Support Assistant', usage: 450, engagement: 89 },
-            { id: '2', title: 'Content Creation Helper', usage: 380, engagement: 76 },
-            { id: '3', title: 'Code Review Assistant', usage: 320, engagement: 64 }
-          ],
-          categoryDistribution: [
-            { category: 'Support', count: 450 },
-            { category: 'Content', count: 380 },
-            { category: 'Development', count: 320 },
-            { category: 'Analysis', count: 280 },
-            { category: 'Other', count: 150 }
-          ]
+            acc[model].usage++;
+            acc[model].tokens += exec.runtime_stats?.token_count || 0;
+            acc[model].totalTime += exec.runtime_stats?.duration_ms || 0;
+            acc[model].count++;
+            return acc;
+          }, {} as Record<string, any>) || {}
+        ).map(([model, stats]) => ({
+          model,
+          usage: stats.usage,
+          tokens: stats.tokens,
+          avgTime: stats.totalTime / stats.count,
+          cost: (stats.tokens / 1000) * 0.002
+        }));
+
+        // Calculate engagement metrics
+        const engagement = {
+          views: engagementData?.filter(e => e.action_type === 'view').length || 0,
+          likes: engagementData?.filter(e => e.action_type === 'like').length || 0,
+          shares: engagementData?.filter(e => e.action_type === 'share').length || 0,
+          comments: engagementData?.filter(e => e.action_type === 'comment').length || 0,
+          uniqueUsers: new Set(engagementData?.map(e => e.user_id)).size || 0
         };
+
+        // Get top prompts
+        const { data: topPromptsData, error: topPromptsError } = await supabase
+          .from('prompts')
+          .select(`
+            id,
+            title,
+            (
+              SELECT COUNT(*) 
+              FROM user_engagement 
+              WHERE prompt_id = prompts.id
+            ) as usage,
+            (
+              SELECT COUNT(*) 
+              FROM user_engagement 
+              WHERE prompt_id = prompts.id 
+              AND action_type IN ('like', 'share', 'comment')
+            ) as engagement
+          `)
+          .order('usage', { ascending: false })
+          .limit(5);
+
+        if (topPromptsError) throw topPromptsError;
+
+        // Calculate user activity by hour
+        const userActivity = Array.from({ length: 24 }, (_, hour) => ({
+          hour,
+          count: engagementData?.filter(e => 
+            new Date(e.created_at).getHours() === hour
+          ).length || 0
+        }));
+
+        // Calculate category distribution
+        const { data: categoryData, error: categoryError } = await supabase
+          .from('prompt_search_index')
+          .select('category')
+          .not('category', 'is', null);
+
+        if (categoryError) throw categoryError;
+
+        const categoryDistribution = Object.entries(
+          categoryData?.reduce((acc, { category }) => {
+            acc[category] = (acc[category] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>) || {}
+        ).map(([category, count]) => ({
+          category,
+          count
+        }));
 
         return {
           totalUsage,
+          tokensUsed,
+          estimatedCost,
+          avgResponseTime,
           historicalData,
+          modelPerformance,
           engagement,
-          userActivity,
-          ...mockData
+          topPrompts: topPromptsData || [],
+          categoryDistribution,
+          userActivity
         };
       } catch (error) {
         console.error('Analytics hook error:', error);
@@ -190,8 +215,8 @@ export function useAnalytics(days: number = 30) {
       }
     },
     refetchInterval: 5 * 60 * 1000, // 5 minutes
-    retry: 3, // Retry failed requests 3 times
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
   const recordEngagement = useMutation({

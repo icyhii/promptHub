@@ -38,7 +38,18 @@ export function useUserSettings() {
 
       const { data, error } = await supabase
         .from('users')
-        .select('*')
+        .select(`
+          *,
+          api_keys:token_usage_logs(
+            model,
+            token_count,
+            created_at
+          ),
+          notifications:user_engagement(
+            action_type,
+            created_at
+          )
+        `)
         .eq('id', user.id)
         .single();
       
@@ -75,25 +86,18 @@ export function useUserSettings() {
 
   const createApiKey = useMutation({
     mutationFn: async ({ name }: { name: string }) => {
-      const key = `pk_${Math.random().toString(36).substr(2, 9)}`;
-      const newKey = {
-        name,
-        key,
-        createdAt: new Date().toISOString()
-      };
-
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
+      const key = `pk_${Math.random().toString(36).substr(2, 9)}`;
       const { data, error } = await supabase
-        .from('users')
-        .update({
-          preferences: {
-            ...settings?.preferences,
-            apiKeys: [...(settings?.preferences.apiKeys || []), newKey]
-          }
+        .from('api_keys')
+        .insert({
+          user_id: user.id,
+          name,
+          key,
+          created_at: new Date().toISOString()
         })
-        .eq('id', user.id)
         .select()
         .single();
       
@@ -106,26 +110,17 @@ export function useUserSettings() {
   });
 
   const deleteApiKey = useMutation({
-    mutationFn: async (keyToDelete: string) => {
+    mutationFn: async (keyId: string) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
-      const updatedKeys = settings?.preferences.apiKeys?.filter(k => k.key !== keyToDelete) || [];
-
-      const { data, error } = await supabase
-        .from('users')
-        .update({
-          preferences: {
-            ...settings?.preferences,
-            apiKeys: updatedKeys
-          }
-        })
-        .eq('id', user.id)
-        .select()
-        .single();
+      const { error } = await supabase
+        .from('api_keys')
+        .delete()
+        .eq('id', keyId)
+        .eq('user_id', user.id);
       
       if (error) throw error;
-      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user-settings'] });

@@ -57,8 +57,7 @@ export function usePrompts(filters?: SearchFilters) {
             sort_by: filters.sort?.field || 'relevance',
             sort_dir: filters.sort?.direction || 'desc',
             limit_val: filters.limit || 20,
-            offset_val: ((filters.page || 1) - 1) * (filters.limit || 20),
-            user_id: user.id
+            offset_val: ((filters.page || 1) - 1) * (filters.limit || 20)
           });
 
         if (error) throw error;
@@ -69,7 +68,18 @@ export function usePrompts(filters?: SearchFilters) {
         .from('prompts')
         .select(`
           *,
-          creator:creator_id(id, email)
+          creator:creator_id(id, email),
+          analytics:prompt_analytics(
+            views,
+            unique_users,
+            likes,
+            shares,
+            comments
+          ),
+          versions:prompt_versions(
+            version_number,
+            created_at
+          )
         `)
         .eq('creator_id', user.id)
         .order('created_at', { ascending: false });
@@ -130,7 +140,7 @@ export function usePrompts(filters?: SearchFilters) {
         .from('prompts')
         .update(updates)
         .eq('id', id)
-        .eq('creator_id', user.id) // Ensure user owns the prompt
+        .eq('creator_id', user.id)
         .select()
         .single();
       
@@ -151,7 +161,7 @@ export function usePrompts(filters?: SearchFilters) {
         .from('prompts')
         .delete()
         .eq('id', id)
-        .eq('creator_id', user.id); // Ensure user owns the prompt
+        .eq('creator_id', user.id);
       
       if (error) throw error;
     },
