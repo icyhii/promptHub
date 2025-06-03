@@ -24,6 +24,7 @@ import {
 import { usePrompts } from '../hooks/usePrompts';
 import { useAnalytics } from '../hooks/useAnalytics';
 import { useTeam } from '../hooks/useTeam';
+import { useAuth } from '../hooks/useAuth';
 import { format, formatDistanceToNow } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { ErrorBoundary } from 'react-error-boundary';
@@ -53,6 +54,7 @@ function DashboardContent() {
   const { prompts, isLoading: isPromptsLoading } = usePrompts();
   const { data: analytics, isLoading: isAnalyticsLoading, refetch } = useAnalytics(7); // Last 7 days
   const { userTeams, isLoading: isTeamsLoading } = useTeam();
+  const { user } = useAuth();
   const [activityFilter, setActivityFilter] = useState<string | null>(null);
 
   // Refetch analytics every 30 seconds
@@ -68,7 +70,7 @@ function DashboardContent() {
     return <LoadingSpinner />;
   }
 
-  const userPrompts = prompts?.filter(p => p.creator_id === 'current_user_id') || [];
+  const userPrompts = prompts?.filter(p => p.creator_id === user?.id) || [];
   const recentPrompts = userPrompts
     .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
     .slice(0, 3);
