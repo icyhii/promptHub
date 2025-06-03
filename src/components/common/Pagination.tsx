@@ -84,7 +84,7 @@ export default function Pagination({
         <div className="flex items-center">
           {getPageNumbers().map((pageNum, idx) => (
             pageNum === -1 ? (
-              <span key={`ellipsis-${idx}`} className="px-2">...</span>
+              <span key={\`ellipsis-${idx}`} className="px-2">...</span>
             ) : (
               <button
                 key={pageNum}

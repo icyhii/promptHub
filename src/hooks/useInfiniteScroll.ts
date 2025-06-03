@@ -21,7 +21,7 @@ export function useInfiniteScroll({
   useEffect(() => {
     const options = {
       root: null,
-      rootMargin: `${threshold}px`,
+      rootMargin: \`${threshold}px`,
       threshold: 0.1
     };
 
