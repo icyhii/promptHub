@@ -3,14 +3,20 @@ import { cn } from '../../utils/cn';
 interface CardProps {
   children: React.ReactNode;
   className?: string;
+  role?: string;
+  'aria-labelledby'?: string;
 }
 
-export function Card({ children, className }: CardProps) {
+export function Card({ children, className, role = 'region', ...props }: CardProps) {
   return (
-    <div className={cn(
-      'bg-white rounded-lg shadow border border-neutralGray-light overflow-hidden',
-      className
-    )}>
+    <div 
+      className={cn(
+        'bg-white rounded-lg shadow border border-neutralGray-light overflow-hidden',
+        className
+      )}
+      role={role}
+      {...props}
+    >
       {children}
     </div>
   );
@@ -19,14 +25,18 @@ export function Card({ children, className }: CardProps) {
 interface CardHeaderProps {
   children: React.ReactNode;
   className?: string;
+  id?: string;
 }
 
-export function CardHeader({ children, className }: CardHeaderProps) {
+export function CardHeader({ children, className, id }: CardHeaderProps) {
   return (
-    <div className={cn(
-      'px-6 py-4 border-b border-neutralGray-light bg-transparent',
-      className
-    )}>
+    <div 
+      className={cn(
+        'px-6 py-4 border-b border-neutralGray-light bg-transparent',
+        className
+      )}
+      id={id}
+    >
       {children}
     </div>
   );
@@ -35,13 +45,16 @@ export function CardHeader({ children, className }: CardHeaderProps) {
 interface CardTitleProps {
   children: React.ReactNode;
   className?: string;
+  level?: 2 | 3 | 4 | 5 | 6;
 }
 
-export function CardTitle({ children, className }: CardTitleProps) {
+export function CardTitle({ children, className, level = 2 }: CardTitleProps) {
+  const Heading = `h${level}` as keyof JSX.IntrinsicElements;
+  
   return (
-    <h3 className={cn('text-lg font-semibold text-textPrimary', className)}>
+    <Heading className={cn('text-lg font-semibold text-textPrimary', className)}>
       {children}
-    </h3>
+    </Heading>
   );
 }
 

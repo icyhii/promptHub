@@ -30,18 +30,22 @@ export default function EmptyState({
   className
 }: EmptyStateProps) {
   return (
-    <div className={cn(
-      "flex flex-col items-center justify-center text-center p-8",
-      "min-h-[400px] bg-white dark:bg-gray-800 rounded-lg border border-neutralGray-light",
-      className
-    )}>
-      <div className="w-16 h-16 mb-6 text-neutralGray-medium">
+    <div 
+      className={cn(
+        "flex flex-col items-center justify-center text-center p-8",
+        "min-h-[400px] bg-white dark:bg-gray-800 rounded-lg border border-neutralGray-light",
+        className
+      )}
+      role="region"
+      aria-label={title}
+    >
+      <div className="w-16 h-16 mb-6 text-neutralGray-medium" aria-hidden="true">
         {icon}
       </div>
       
-      <h3 className="text-xl font-semibold text-textPrimary mb-2">
+      <h2 className="text-xl font-semibold text-textPrimary mb-2">
         {title}
-      </h3>
+      </h2>
       
       <p className="text-textSecondary mb-6 max-w-md">
         {description}
@@ -70,10 +74,10 @@ export default function EmptyState({
 
       {tips && tips.length > 0 && (
         <div className="text-left w-full max-w-md">
-          <h4 className="text-sm font-medium text-textPrimary mb-2">
+          <h3 className="text-sm font-medium text-textPrimary mb-2">
             Helpful Tips:
-          </h4>
-          <ul className="list-disc list-inside space-y-1">
+          </h3>
+          <ul className="list-disc list-inside space-y-1" role="list">
             {tips.map((tip, index) => (
               <li key={index} className="text-sm text-textSecondary">
                 {tip}
