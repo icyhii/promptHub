@@ -7,4 +7,24 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Create Supabase client with additional options
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+  },
+  global: {
+    headers: {
+      'X-Client-Info': 'prompt-management-app',
+    },
+  },
+});
+
+// Add error handling for failed requests
+supabase.handleError = (error: any) => {
+  console.error('Supabase Error:', error);
+  if (error.message?.includes('Failed to fetch')) {
+    console.error('Network Error: Unable to connect to Supabase');
+  }
+  throw error;
+};

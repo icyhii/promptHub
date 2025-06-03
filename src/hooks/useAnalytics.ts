@@ -53,107 +53,142 @@ export function useAnalytics(days: number = 30) {
   } = useQuery({
     queryKey: ['analytics', days],
     queryFn: async (): Promise<AnalyticsData> => {
-      const startDate = startOfDay(subDays(new Date(), days));
-      
-      // Fetch analytics data
-      const { data: analyticsData, error: analyticsError } = await supabase
-        .from('prompt_analytics')
-        .select('*')
-        .gte('date', startDate.toISOString());
+      try {
+        const startDate = startOfDay(subDays(new Date(), days));
+        
+        // Fetch analytics data with error handling
+        const { data: analyticsData, error: analyticsError } = await supabase
+          .from('prompt_analytics')
+          .select('*')
+          .gte('date', startDate.toISOString());
 
-      if (analyticsError) throw analyticsError;
+        if (analyticsError) {
+          console.error('Analytics fetch error:', analyticsError);
+          throw analyticsError;
+        }
 
-      // Fetch engagement data
-      const { data: engagementData, error: engagementError } = await supabase
-        .from('user_engagement')
-        .select('*')
-        .gte('created_at', startDate.toISOString());
+        if (!analyticsData) {
+          console.warn('No analytics data returned');
+          return {
+            totalUsage: 0,
+            tokensUsed: 0,
+            estimatedCost: 0,
+            avgResponseTime: 0,
+            historicalData: [],
+            modelPerformance: [],
+            engagement: {
+              views: 0,
+              likes: 0,
+              shares: 0,
+              comments: 0,
+              uniqueUsers: 0
+            },
+            topPrompts: [],
+            categoryDistribution: [],
+            userActivity: []
+          };
+        }
 
-      if (engagementError) throw engagementError;
+        // Fetch engagement data with error handling
+        const { data: engagementData, error: engagementError } = await supabase
+          .from('user_engagement')
+          .select('*')
+          .gte('created_at', startDate.toISOString());
 
-      // Process analytics data
-      const totalUsage = analyticsData.reduce((sum, day) => sum + day.views, 0);
-      const uniqueUsers = new Set(engagementData.map(e => e.user_id)).size;
+        if (engagementError) {
+          console.error('Engagement fetch error:', engagementError);
+          throw engagementError;
+        }
 
-      // Calculate engagement metrics
-      const engagement = {
-        views: analyticsData.reduce((sum, day) => sum + day.views, 0),
-        likes: analyticsData.reduce((sum, day) => sum + day.likes, 0),
-        shares: analyticsData.reduce((sum, day) => sum + day.shares, 0),
-        comments: analyticsData.reduce((sum, day) => sum + day.comments, 0),
-        uniqueUsers
-      };
+        // Process analytics data
+        const totalUsage = analyticsData.reduce((sum, day) => sum + (day.views || 0), 0);
+        const uniqueUsers = new Set(engagementData?.map(e => e.user_id) || []).size;
 
-      // Generate historical data
-      const historicalData = Array.from({ length: days }, (_, i) => {
-        const date = format(subDays(new Date(), i), 'yyyy-MM-dd');
-        const dayData = analyticsData.find(d => format(new Date(d.date), 'yyyy-MM-dd') === date);
-        return {
-          date,
-          usage: dayData?.views || 0,
-          tokens: dayData?.unique_users || 0
+        // Calculate engagement metrics
+        const engagement = {
+          views: analyticsData.reduce((sum, day) => sum + (day.views || 0), 0),
+          likes: analyticsData.reduce((sum, day) => sum + (day.likes || 0), 0),
+          shares: analyticsData.reduce((sum, day) => sum + (day.shares || 0), 0),
+          comments: analyticsData.reduce((sum, day) => sum + (day.comments || 0), 0),
+          uniqueUsers
         };
-      }).reverse();
 
-      // Calculate user activity by hour
-      const userActivity = Array.from({ length: 24 }, (_, hour) => {
-        const count = engagementData.filter(e => 
-          new Date(e.created_at).getHours() === hour
-        ).length;
-        return { hour, count };
-      });
+        // Generate historical data
+        const historicalData = Array.from({ length: days }, (_, i) => {
+          const date = format(subDays(new Date(), i), 'yyyy-MM-dd');
+          const dayData = analyticsData.find(d => format(new Date(d.date), 'yyyy-MM-dd') === date);
+          return {
+            date,
+            usage: dayData?.views || 0,
+            tokens: dayData?.unique_users || 0
+          };
+        }).reverse();
 
-      // Mock data for demonstration
-      const mockData = {
-        tokensUsed: Math.floor(totalUsage * 1.5),
-        estimatedCost: totalUsage * 0.0001,
-        avgResponseTime: 800,
-        modelPerformance: [
-          {
-            model: 'GPT-4',
-            usage: Math.floor(totalUsage * 0.6),
-            tokens: Math.floor(totalUsage * 0.9),
-            avgTime: 900,
-            cost: totalUsage * 0.00006
-          },
-          {
-            model: 'Claude-3',
-            usage: Math.floor(totalUsage * 0.3),
-            tokens: Math.floor(totalUsage * 0.45),
-            avgTime: 700,
-            cost: totalUsage * 0.00003
-          },
-          {
-            model: 'Gemini',
-            usage: Math.floor(totalUsage * 0.1),
-            tokens: Math.floor(totalUsage * 0.15),
-            avgTime: 600,
-            cost: totalUsage * 0.00001
-          }
-        ],
-        topPrompts: [
-          { id: '1', title: 'Customer Support Assistant', usage: 450, engagement: 89 },
-          { id: '2', title: 'Content Creation Helper', usage: 380, engagement: 76 },
-          { id: '3', title: 'Code Review Assistant', usage: 320, engagement: 64 }
-        ],
-        categoryDistribution: [
-          { category: 'Support', count: 450 },
-          { category: 'Content', count: 380 },
-          { category: 'Development', count: 320 },
-          { category: 'Analysis', count: 280 },
-          { category: 'Other', count: 150 }
-        ]
-      };
+        // Calculate user activity by hour
+        const userActivity = Array.from({ length: 24 }, (_, hour) => {
+          const count = engagementData?.filter(e => 
+            new Date(e.created_at).getHours() === hour
+          ).length || 0;
+          return { hour, count };
+        });
 
-      return {
-        totalUsage,
-        historicalData,
-        engagement,
-        userActivity,
-        ...mockData
-      };
+        // Mock data for demonstration
+        const mockData = {
+          tokensUsed: Math.floor(totalUsage * 1.5),
+          estimatedCost: totalUsage * 0.0001,
+          avgResponseTime: 800,
+          modelPerformance: [
+            {
+              model: 'GPT-4',
+              usage: Math.floor(totalUsage * 0.6),
+              tokens: Math.floor(totalUsage * 0.9),
+              avgTime: 900,
+              cost: totalUsage * 0.00006
+            },
+            {
+              model: 'Claude-3',
+              usage: Math.floor(totalUsage * 0.3),
+              tokens: Math.floor(totalUsage * 0.45),
+              avgTime: 700,
+              cost: totalUsage * 0.00003
+            },
+            {
+              model: 'Gemini',
+              usage: Math.floor(totalUsage * 0.1),
+              tokens: Math.floor(totalUsage * 0.15),
+              avgTime: 600,
+              cost: totalUsage * 0.00001
+            }
+          ],
+          topPrompts: [
+            { id: '1', title: 'Customer Support Assistant', usage: 450, engagement: 89 },
+            { id: '2', title: 'Content Creation Helper', usage: 380, engagement: 76 },
+            { id: '3', title: 'Code Review Assistant', usage: 320, engagement: 64 }
+          ],
+          categoryDistribution: [
+            { category: 'Support', count: 450 },
+            { category: 'Content', count: 380 },
+            { category: 'Development', count: 320 },
+            { category: 'Analysis', count: 280 },
+            { category: 'Other', count: 150 }
+          ]
+        };
+
+        return {
+          totalUsage,
+          historicalData,
+          engagement,
+          userActivity,
+          ...mockData
+        };
+      } catch (error) {
+        console.error('Analytics hook error:', error);
+        throw error;
+      }
     },
-    refetchInterval: 5 * 60 * 1000 // 5 minutes
+    refetchInterval: 5 * 60 * 1000, // 5 minutes
+    retry: 3, // Retry failed requests 3 times
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
   });
 
   const recordEngagement = useMutation({
