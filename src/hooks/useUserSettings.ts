@@ -23,6 +23,15 @@ export interface UserSettings {
   updated_at: string;
 }
 
+export interface ApiKey {
+  id: string;
+  name: string;
+  permissions: Record<string, boolean>;
+  created_at: string;
+  expires_at: string | null;
+  last_used_at: string | null;
+}
+
 export function useUserSettings() {
   const queryClient = useQueryClient();
 
@@ -85,22 +94,17 @@ export function useUserSettings() {
   });
 
   const createApiKey = useMutation({
-    mutationFn: async ({ name }: { name: string }) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
+    mutationFn: async ({ 
+      name, 
+      permissions 
+    }: { 
+      name: string; 
+      permissions: Record<string, boolean>;
+    }) => {
+      const { data, error } = await supabase.functions.invoke('create-api-key', {
+        body: JSON.stringify({ name, permissions })
+      });
 
-      const key = `pk_${Math.random().toString(36).substr(2, 9)}`;
-      const { data, error } = await supabase
-        .from('api_keys')
-        .insert({
-          user_id: user.id,
-          name,
-          key,
-          created_at: new Date().toISOString()
-        })
-        .select()
-        .single();
-      
       if (error) throw error;
       return data;
     },
@@ -115,12 +119,21 @@ export function useUserSettings() {
       if (!user) throw new Error('User not authenticated');
 
       const { error } = await supabase
-        .from('api_keys')
+        .from('api_tokens')
         .delete()
         .eq('id', keyId)
         .eq('user_id', user.id);
       
       if (error) throw error;
+
+      // Log deletion
+      await supabase
+        .from('audit_logs')
+        .insert({
+          action: 'api_token.deleted',
+          entity_type: 'api_token',
+          entity_id: keyId
+        });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user-settings'] });
