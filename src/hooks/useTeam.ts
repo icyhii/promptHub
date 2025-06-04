@@ -109,11 +109,15 @@ export function useTeam(teamId?: string) {
       description?: string; 
       visibility?: 'public' | 'private';
     }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
       const { data, error } = await supabase
         .rpc('create_team_with_settings', {
           team_name: name,
           team_description: description,
-          team_visibility: visibility
+          team_visibility: visibility,
+          user_id: user.id
         });
       
       if (error) throw error;
