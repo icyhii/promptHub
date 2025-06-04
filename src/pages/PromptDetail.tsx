@@ -4,10 +4,11 @@ import Button from '../components/common/Button';
 import TagInput from '../components/common/TagInput';
 import CollapsiblePanel from '../components/common/CollapsiblePanel';
 import VersionHistory from '../components/version/VersionHistory';
+import PromptEditorActions from '../components/prompts/PromptEditorActions';
 import { usePrompts } from '../hooks/usePrompts';
 import { useVersionControl } from '../hooks/useVersionControl';
 import { useAutosave, type SaveStatus } from '../hooks/useAutosave';
-import { ArrowLeft, Copy, MoreHorizontal, ChevronDown, Save, Check, AlertCircle, Clock, GitBranch } from 'lucide-react';
+import { ArrowLeft, MoreHorizontal, ChevronDown, Save, Check, AlertCircle, Clock, GitBranch } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import ReactQuill from 'react-quill';
@@ -53,7 +54,7 @@ export default function PromptDetail() {
   const [changeDescription, setChangeDescription] = useState('');
   const [activeBranch, setActiveBranch] = useState<string | null>(null);
 
-  const { prompts } = usePrompts();
+  const { prompts, createPrompt, updatePrompt, forkPrompt } = usePrompts();
   const { createVersion, versions, branches } = useVersionControl(id);
 
   // Calculate token and character counts
@@ -69,6 +70,37 @@ export default function PromptDetail() {
         return;
       }
 
+      let promptId = id;
+      
+      // If it's a new prompt or we're creating a new version
+      if (!promptId) {
+        const newPrompt = await createPrompt.mutateAsync({
+          title: promptTitle,
+          body: promptContent,
+          tags: promptTags.map(tag => tag.text),
+          metadata: {
+            model: selectedModel,
+            parallelText,
+          },
+          status: 'draft',
+          visibility: 'private'
+        });
+        promptId = newPrompt.id;
+        navigate(`/prompts/${promptId}`);
+      } else {
+        await updatePrompt.mutateAsync({
+          id: promptId,
+          title: promptTitle,
+          body: promptContent,
+          tags: promptTags.map(tag => tag.text),
+          metadata: {
+            model: selectedModel,
+            parallelText,
+          }
+        });
+      }
+
+      // Create a new version
       await createVersion.mutateAsync({
         content: {
           title: promptTitle,
@@ -81,32 +113,24 @@ export default function PromptDetail() {
         branchId: activeBranch
       });
 
-      toast.success('Version saved successfully');
-      setChangeDescription('');
+      return promptId;
     } catch (error) {
-      toast.error('Failed to save version');
+      console.error('Save error:', error);
       throw error;
     }
-  }, [promptTitle, promptContent, promptTags, selectedModel, parallelText, changeDescription, activeBranch, createVersion]);
+  }, [id, promptTitle, promptContent, promptTags, selectedModel, parallelText, changeDescription, activeBranch, createPrompt, updatePrompt, createVersion, navigate]);
 
-  // Autosave functionality
-  const { saveStatus } = useAutosave({
-    data: { promptTitle, promptContent, promptTags, selectedModel },
-    onSave: handleSave
-  });
+  const handleDuplicate = async () => {
+    if (!id) {
+      toast.error('Please save the prompt first');
+      return;
+    }
 
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-        e.preventDefault();
-        handleSave();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleSave]);
+    await forkPrompt.mutateAsync({
+      promptId: id,
+      title: `${promptTitle} (Copy)`
+    });
+  };
 
   useEffect(() => {
     if (!isNewPrompt && id) {
@@ -115,17 +139,11 @@ export default function PromptDetail() {
         setPromptTitle(prompt.title);
         setPromptContent(prompt.body);
         setPromptTags(prompt.tags.map(tag => ({ id: tag, text: tag })));
+        setSelectedModel(prompt.metadata?.model || 'GPT-4');
+        setParallelText(prompt.metadata?.parallelText || '');
       }
     }
   }, [id, prompts, isNewPrompt]);
-
-  const handleDuplicate = () => {
-    toast.success('Prompt duplicated');
-  };
-
-  const handleShare = () => {
-    toast.success('Share dialog opened');
-  };
 
   const getSaveStatusIcon = (status: SaveStatus) => {
     switch (status) {
@@ -186,15 +204,14 @@ export default function PromptDetail() {
           >
             {allPanelsExpanded ? 'Collapse All' : 'Expand All'}
           </Button>
-          <Button onClick={handleSave}>
-            Save
-          </Button>
-          <Button variant="outline" onClick={handleDuplicate}>
-            Duplicate
-          </Button>
-          <Button variant="outline" onClick={handleShare}>
-            Share
-          </Button>
+          <PromptEditorActions
+            promptId={id}
+            title={promptTitle}
+            content={promptContent}
+            onSavePrompt={handleSave}
+            onDuplicatePrompt={handleDuplicate}
+            isLoading={createPrompt.isLoading || updatePrompt.isLoading || forkPrompt.isLoading}
+          />
           <button className="p-2 hover:bg-gray-100 rounded-full">
             <MoreHorizontal size={20} />
           </button>
