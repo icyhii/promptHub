@@ -3,25 +3,25 @@ import { useDebounce } from 'use-debounce';
 
 export type SaveStatus = 'saved' | 'saving' | 'error' | 'unsaved';
 
-interface UseAutosaveProps<T> {
-  data: T;
-  onSave: (data: T) => Promise<void>;
+interface UseAutosaveProps {
+  onSave: () => Promise<any>;
+  content: Record<string, any>;
   delay?: number;
 }
 
-export function useAutosave<T>({ data, onSave, delay = 1000 }: UseAutosaveProps<T>) {
+export function useAutosave({ onSave, content, delay = 1000 }: UseAutosaveProps) {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
-  const [debouncedData] = useDebounce(data, delay);
+  const [debouncedContent] = useDebounce(content, delay);
 
   useEffect(() => {
     setSaveStatus('unsaved');
-  }, [data]);
+  }, [content]);
 
   useEffect(() => {
     const saveData = async () => {
       try {
         setSaveStatus('saving');
-        await onSave(debouncedData);
+        await onSave();
         setSaveStatus('saved');
       } catch (error) {
         setSaveStatus('error');
@@ -29,10 +29,10 @@ export function useAutosave<T>({ data, onSave, delay = 1000 }: UseAutosaveProps<
       }
     };
 
-    if (debouncedData !== data) {
+    if (JSON.stringify(debouncedContent) !== JSON.stringify(content)) {
       saveData();
     }
-  }, [debouncedData, data, onSave]);
+  }, [debouncedContent, content, onSave]);
 
   return { saveStatus };
 }
