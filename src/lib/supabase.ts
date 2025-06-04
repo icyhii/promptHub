@@ -24,13 +24,13 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
 });
 
-// Verify connection
+// Verify connection with better error messaging
 export const verifySupabaseConnection = async () => {
   try {
     const { data, error } = await supabase.from('prompt_analytics').select('count').limit(1);
     if (error) {
       console.error('Supabase connection error:', error);
-      throw error;
+      throw new Error('Failed to connect to Supabase. Please ensure you have clicked "Connect to Supabase" to set up your project and configure your environment variables.');
     }
     return true;
   } catch (err) {
