@@ -137,8 +137,34 @@ export function usePrompts(filters?: SearchFilters) {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['prompts'] });
+    onMutate: async (newPrompt) => {
+      await queryClient.cancelQueries({ queryKey: ['prompts', filters, user?.id] });
+
+      const previousPrompts = queryClient.getQueryData<Prompt[]>(['prompts', filters, user?.id]);
+
+      if (previousPrompts) {
+        queryClient.setQueryData<Prompt[]>(['prompts', filters, user?.id], [
+          {
+            ...newPrompt,
+            id: 'temp-id',
+            creator_id: user?.id || '',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          } as Prompt,
+          ...previousPrompts,
+        ]);
+      }
+
+      return { previousPrompts };
+    },
+    onError: (err, newPrompt, context) => {
+      if (context?.previousPrompts) {
+        queryClient.setQueryData(['prompts', filters, user?.id], context.previousPrompts);
+      }
+      toast.error('Failed to create prompt');
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['prompts', filters, user?.id] });
     }
   });
 
@@ -156,8 +182,39 @@ export function usePrompts(filters?: SearchFilters) {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['prompts'] });
+    onMutate: async ({ promptId, title }) => {
+      await queryClient.cancelQueries({ queryKey: ['prompts', filters, user?.id] });
+
+      const previousPrompts = queryClient.getQueryData<Prompt[]>(['prompts', filters, user?.id]);
+      const originalPrompt = previousPrompts?.find(p => p.id === promptId);
+
+      if (previousPrompts && originalPrompt) {
+        const optimisticFork = {
+          ...originalPrompt,
+          id: 'temp-fork-id',
+          title: title || `${originalPrompt.title} (Fork)`,
+          creator_id: user?.id || '',
+          forked_from: promptId,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+
+        queryClient.setQueryData<Prompt[]>(['prompts', filters, user?.id], [
+          optimisticFork,
+          ...previousPrompts,
+        ]);
+      }
+
+      return { previousPrompts };
+    },
+    onError: (err, variables, context) => {
+      if (context?.previousPrompts) {
+        queryClient.setQueryData(['prompts', filters, user?.id], context.previousPrompts);
+      }
+      toast.error('Failed to fork prompt');
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['prompts', filters, user?.id] });
     }
   });
 
@@ -176,9 +233,47 @@ export function usePrompts(filters?: SearchFilters) {
       if (error) throw error;
       return data;
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['prompts'] });
-      queryClient.invalidateQueries({ queryKey: ['prompt', data.id] });
+    onMutate: async (updatedPrompt) => {
+      await queryClient.cancelQueries({ queryKey: ['prompts', filters, user?.id] });
+      await queryClient.cancelQueries({ queryKey: ['prompt', updatedPrompt.id] });
+
+      const previousPrompts = queryClient.getQueryData<Prompt[]>(['prompts', filters, user?.id]);
+      const previousPrompt = queryClient.getQueryData<Prompt>(['prompt', updatedPrompt.id]);
+
+      if (previousPrompts) {
+        queryClient.setQueryData<Prompt[]>(
+          ['prompts', filters, user?.id],
+          previousPrompts.map(prompt =>
+            prompt.id === updatedPrompt.id
+              ? { ...prompt, ...updatedPrompt, updated_at: new Date().toISOString() }
+              : prompt
+          )
+        );
+      }
+
+      if (previousPrompt) {
+        queryClient.setQueryData<Prompt>(
+          ['prompt', updatedPrompt.id],
+          { ...previousPrompt, ...updatedPrompt, updated_at: new Date().toISOString() }
+        );
+      }
+
+      return { previousPrompts, previousPrompt };
+    },
+    onError: (err, updatedPrompt, context) => {
+      if (context?.previousPrompts) {
+        queryClient.setQueryData(['prompts', filters, user?.id], context.previousPrompts);
+      }
+      if (context?.previousPrompt) {
+        queryClient.setQueryData(['prompt', updatedPrompt.id], context.previousPrompt);
+      }
+      toast.error('Failed to update prompt');
+    },
+    onSettled: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['prompts', filters, user?.id] });
+      if (data) {
+        queryClient.invalidateQueries({ queryKey: ['prompt', data.id] });
+      }
     }
   });
 
@@ -194,8 +289,28 @@ export function usePrompts(filters?: SearchFilters) {
       
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['prompts'] });
+    onMutate: async (deletedId) => {
+      await queryClient.cancelQueries({ queryKey: ['prompts', filters, user?.id] });
+
+      const previousPrompts = queryClient.getQueryData<Prompt[]>(['prompts', filters, user?.id]);
+
+      if (previousPrompts) {
+        queryClient.setQueryData<Prompt[]>(
+          ['prompts', filters, user?.id],
+          previousPrompts.filter(prompt => prompt.id !== deletedId)
+        );
+      }
+
+      return { previousPrompts };
+    },
+    onError: (err, deletedId, context) => {
+      if (context?.previousPrompts) {
+        queryClient.setQueryData(['prompts', filters, user?.id], context.previousPrompts);
+      }
+      toast.error('Failed to delete prompt');
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['prompts', filters, user?.id] });
     }
   });
 

@@ -21,26 +21,27 @@ export function Skeleton({ className }: SkeletonProps) {
 
 export function PromptCardSkeleton() {
   return (
-    <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-white dark:bg-gray-800">
-      <div className="flex items-center justify-between mb-4">
-        <Skeleton className="h-6 w-3/4" />
-        <Skeleton className="h-8 w-8 rounded-full" />
-      </div>
-      <Skeleton className="h-4 w-2/3 mb-3" />
-      <div className="flex gap-2 mb-4">
-        <Skeleton className="h-6 w-16 rounded-full" />
-        <Skeleton className="h-6 w-16 rounded-full" />
-        <Skeleton className="h-6 w-16 rounded-full" />
-      </div>
+    <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-white dark:bg-gray-800 space-y-3">
       <div className="flex items-center justify-between">
+        <Skeleton className="h-6 w-3/4" /> {/* Title */}
+        <Skeleton className="h-6 w-10" /> {/* Rating */}
+      </div>
+      <Skeleton className="h-4 w-full" /> {/* Description line 1 */}
+      <Skeleton className="h-4 w-5/6" /> {/* Description line 2 */}
+      <div className="flex gap-2"> {/* Tags */}
+        <Skeleton className="h-5 w-16 rounded-full" />
+        <Skeleton className="h-5 w-20 rounded-full" />
+        <Skeleton className="h-5 w-14 rounded-full" />
+      </div>
+      <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-700 mt-3">
         <div className="flex items-center space-x-2">
-          <Skeleton className="h-8 w-8 rounded-full" />
-          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-8 w-8 rounded-full" /> {/* Avatar */}
+          <Skeleton className="h-4 w-32" /> {/* Author name */}
         </div>
         <div className="flex space-x-2">
-          <Skeleton className="h-8 w-8 rounded-md" />
-          <Skeleton className="h-8 w-8 rounded-md" />
-          <Skeleton className="h-8 w-8 rounded-md" />
+          <Skeleton className="h-8 w-8 rounded-md" /> {/* Action button */}
+          <Skeleton className="h-8 w-8 rounded-md" /> {/* Action button */}
+          <Skeleton className="h-8 w-8 rounded-md" /> {/* Action button */}
         </div>
       </div>
     </div>
