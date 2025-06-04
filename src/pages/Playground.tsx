@@ -2,24 +2,11 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/common/Card';
 import Button from '../components/common/Button';
 import { Play, Copy, Save, Lightbulb, RefreshCcw, ThumbsUp, ThumbsDown, ArrowLeftRight, Maximize2, Minimize2 } from 'lucide-react';
-import { runPrompt, type PromptRunResponse } from '../lib/api';
-import { ErrorBoundary } from 'react-error-boundary';
-import toast from 'react-hot-toast';
 import { diff_match_patch } from 'diff-match-patch';
+import { ErrorBoundary } from 'react-error-boundary';
+import { usePlaygroundStore } from '../stores/playgroundStore';
 
 const dmp = new diff_match_patch();
-
-interface PromptConfig {
-  prompt: string;
-  model: string;
-  temperature: number;
-  maxTokens: number;
-}
-
-interface PromptResult extends PromptRunResponse {
-  executionTime: number;
-  startTime: number;
-}
 
 function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) {
   return (
@@ -34,118 +21,37 @@ function PlaygroundContent() {
   const [activeTab, setActiveTab] = useState<'single' | 'a-b'>('single');
   const [isFullScreen, setIsFullScreen] = useState(false);
   
-  // Single prompt state
-  const [promptInput, setPromptInput] = useState(
-    `Create a compelling product description for a new smartwatch that tracks health metrics and has a 7-day battery life. The target audience is fitness enthusiasts aged 25-40.`
-  );
-  const [selectedModel, setSelectedModel] = useState('gpt-4');
-  const [temperature, setTemperature] = useState(0.7);
-  const [maxTokens, setMaxTokens] = useState(500);
-  const [output, setOutput] = useState<PromptResult | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-
-  // A/B testing state
-  const [promptA, setPromptA] = useState<PromptConfig>({
-    prompt: promptInput,
-    model: selectedModel,
-    temperature: temperature,
-    maxTokens: maxTokens
-  });
-  const [promptB, setPromptB] = useState<PromptConfig>({
-    prompt: '',
-    model: selectedModel,
-    temperature: temperature,
-    maxTokens: maxTokens
-  });
-  const [resultA, setResultA] = useState<PromptResult | null>(null);
-  const [resultB, setResultB] = useState<PromptResult | null>(null);
-  const [isLoadingA, setIsLoadingA] = useState(false);
-  const [isLoadingB, setIsLoadingB] = useState(false);
-  const [comparisonNotes, setComparisonNotes] = useState('');
-
-  const handleRunPrompt = async () => {
-    try {
-      setIsLoading(true);
-      const startTime = Date.now();
-      const response = await runPrompt({
-        prompt: promptInput,
-        model: selectedModel,
-        parameters: {
-          temperature,
-          maxTokens
-        }
-      });
-      
-      setOutput({
-        ...response,
-        executionTime: Date.now() - startTime,
-        startTime
-      });
-      toast.success('Prompt executed successfully');
-    } catch (error) {
-      toast.error('Failed to execute prompt');
-      console.error('Error:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleRunComparison = async () => {
-    try {
-      setIsLoadingA(true);
-      setIsLoadingB(true);
-
-      // Run both prompts in parallel
-      const startTimeA = Date.now();
-      const startTimeB = Date.now();
-
-      const [responseA, responseB] = await Promise.all([
-        runPrompt({
-          prompt: promptA.prompt,
-          model: promptA.model,
-          parameters: {
-            temperature: promptA.temperature,
-            maxTokens: promptA.maxTokens
-          }
-        }),
-        runPrompt({
-          prompt: promptB.prompt,
-          model: promptB.model,
-          parameters: {
-            temperature: promptB.temperature,
-            maxTokens: promptB.maxTokens
-          }
-        })
-      ]);
-
-      setResultA({
-        ...responseA,
-        executionTime: Date.now() - startTimeA,
-        startTime: startTimeA
-      });
-      setResultB({
-        ...responseB,
-        executionTime: Date.now() - startTimeB,
-        startTime: startTimeB
-      });
-
-      toast.success('Comparison completed successfully');
-    } catch (error) {
-      toast.error('Failed to run comparison');
-      console.error('Error:', error);
-    } finally {
-      setIsLoadingA(false);
-      setIsLoadingB(false);
-    }
-  };
-
-  const copyToSideB = () => {
-    setPromptB({
-      ...promptA,
-      prompt: promptA.prompt
-    });
-    toast.success('Copied to Side B');
-  };
+  const {
+    // Single prompt state
+    promptInput,
+    selectedModel,
+    temperature,
+    maxTokens,
+    output,
+    isLoading,
+    
+    // A/B testing state
+    promptA,
+    promptB,
+    resultA,
+    resultB,
+    isLoadingA,
+    isLoadingB,
+    comparisonNotes,
+    
+    // Actions
+    setPromptInput,
+    setSelectedModel,
+    setTemperature,
+    setMaxTokens,
+    setPromptA,
+    setPromptB,
+    setComparisonNotes,
+    runSinglePrompt,
+    runComparison,
+    copyToSideB,
+    reset
+  } = usePlaygroundStore();
 
   const calculateDiff = (textA: string, textB: string) => {
     const diffs = dmp.diff_main(textA, textB);
@@ -163,7 +69,6 @@ function PlaygroundContent() {
       timestamp: new Date().toISOString()
     };
 
-    // Export as JSON file
     const blob = new Blob([JSON.stringify(comparison, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -173,8 +78,6 @@ function PlaygroundContent() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-
-    toast.success('Comparison saved');
   };
 
   return (
@@ -266,7 +169,7 @@ function PlaygroundContent() {
                 <Button 
                   className="w-full" 
                   leftIcon={<Play size={16} />}
-                  onClick={handleRunPrompt}
+                  onClick={runSinglePrompt}
                   isLoading={isLoading}
                 >
                   {isLoading ? 'Running...' : 'Run Prompt'}
@@ -302,7 +205,6 @@ function PlaygroundContent() {
                       leftIcon={<Copy size={14} />}
                       onClick={() => {
                         navigator.clipboard.writeText(output.text);
-                        toast.success('Copied to clipboard');
                       }}
                     >
                       Copy
@@ -368,7 +270,7 @@ function PlaygroundContent() {
               <CardContent className="space-y-4">
                 <textarea
                   value={promptA.prompt}
-                  onChange={(e) => setPromptA({ ...promptA, prompt: e.target.value })}
+                  onChange={(e) => setPromptA({ prompt: e.target.value })}
                   className="w-full h-40 p-3 font-mono text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
                   placeholder="Enter prompt A..."
                 />
@@ -380,7 +282,7 @@ function PlaygroundContent() {
                     </label>
                     <select
                       value={promptA.model}
-                      onChange={(e) => setPromptA({ ...promptA, model: e.target.value })}
+                      onChange={(e) => setPromptA({ model: e.target.value })}
                       className="w-full p-2 rounded-md bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
                     >
                       <option value="gpt-4">GPT-4</option>
@@ -400,7 +302,7 @@ function PlaygroundContent() {
                       max="1"
                       step="0.1"
                       value={promptA.temperature}
-                      onChange={(e) => setPromptA({ ...promptA, temperature: parseFloat(e.target.value) })}
+                      onChange={(e) => setPromptA({ temperature: parseFloat(e.target.value) })}
                       className="w-full"
                     />
                   </div>
@@ -416,7 +318,7 @@ function PlaygroundContent() {
                     max="2000"
                     step="100"
                     value={promptA.maxTokens}
-                    onChange={(e) => setPromptA({ ...promptA, maxTokens: parseInt(e.target.value) })}
+                    onChange={(e) => setPromptA({ maxTokens: parseInt(e.target.value) })}
                     className="w-full"
                   />
                 </div>
@@ -443,7 +345,7 @@ function PlaygroundContent() {
               <CardContent className="space-y-4">
                 <textarea
                   value={promptB.prompt}
-                  onChange={(e) => setPromptB({ ...promptB, prompt: e.target.value })}
+                  onChange={(e) => setPromptB({ prompt: e.target.value })}
                   className="w-full h-40 p-3 font-mono text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
                   placeholder="Enter prompt B..."
                 />
@@ -455,7 +357,7 @@ function PlaygroundContent() {
                     </label>
                     <select
                       value={promptB.model}
-                      onChange={(e) => setPromptB({ ...promptB, model: e.target.value })}
+                      onChange={(e) => setPromptB({ model: e.target.value })}
                       className="w-full p-2 rounded-md bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
                     >
                       <option value="gpt-4">GPT-4</option>
@@ -475,7 +377,7 @@ function PlaygroundContent() {
                       max="1"
                       step="0.1"
                       value={promptB.temperature}
-                      onChange={(e) => setPromptB({ ...promptB, temperature: parseFloat(e.target.value) })}
+                      onChange={(e) => setPromptB({ temperature: parseFloat(e.target.value) })}
                       className="w-full"
                     />
                   </div>
@@ -491,7 +393,7 @@ function PlaygroundContent() {
                     max="2000"
                     step="100"
                     value={promptB.maxTokens}
-                    onChange={(e) => setPromptB({ ...promptB, maxTokens: parseInt(e.target.value) })}
+                    onChange={(e) => setPromptB({ maxTokens: parseInt(e.target.value) })}
                     className="w-full"
                   />
                 </div>
@@ -517,7 +419,7 @@ function PlaygroundContent() {
               <div className="flex justify-between items-center">
                 <div className="space-x-2">
                   <Button
-                    onClick={handleRunComparison}
+                    onClick={runComparison}
                     isLoading={isLoadingA || isLoadingB}
                     leftIcon={<Play size={16} />}
                   >
