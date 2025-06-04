@@ -33,8 +33,7 @@
     "react-select": "^5.8.0",
     "react-timezone-select": "^2.1.4",
     "zod": "^3.22.4",
-    "openai": "^4.12.1",
-    "marked": "^9.1.5"
+    "openai": "^4.12.1"
   },
   "devDependencies": {
     "@types/diff-match-patch": "^1.0.4",
@@ -42,7 +41,6 @@
     "@types/react-dom": "^18.2.17",
     "@types/react-tag-input": "^6.6.6",
     "@types/uuid": "^9.0.7",
-    "@types/marked": "^5.0.1",
     "@typescript-eslint/eslint-plugin": "^6.13.2",
     "@typescript-eslint/parser": "^6.13.2",
     "@vitejs/plugin-react": "^4.2.1",
