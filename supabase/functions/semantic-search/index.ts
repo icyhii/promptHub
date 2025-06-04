@@ -31,13 +31,32 @@ serve(async (req: Request) => {
       userContext = {},
     } = await req.json();
 
-    if (!query || typeof query !== "string") {
+    // Input validation
+    if (!query) {
       return new Response(
-        JSON.stringify({ error: "Query is required and must be a string" }),
-        { 
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" }
-        }
+        JSON.stringify({ error: "Query is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (typeof query !== "string") {
+      return new Response(
+        JSON.stringify({ error: "Query must be a string" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (query.length > 500) {
+      return new Response(
+        JSON.stringify({ error: "Query exceeds maximum length of 500 characters" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (typeof limit !== "number" || limit < 1 || limit > 100) {
+      return new Response(
+        JSON.stringify({ error: "Limit must be a number between 1 and 100" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -95,18 +114,16 @@ serve(async (req: Request) => {
 
     return new Response(
       JSON.stringify(scoredResults),
-      { 
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("Search error:", error);
     return new Response(
-      JSON.stringify({ error: "Internal server error" }),
-      { 
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      }
+      JSON.stringify({ 
+        error: "Internal server error",
+        details: error instanceof Error ? error.message : "Unknown error"
+      }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
