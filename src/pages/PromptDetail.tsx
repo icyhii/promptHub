@@ -57,6 +57,18 @@ export default function PromptDetail() {
   const { prompts, createPrompt, updatePrompt, forkPrompt } = usePrompts();
   const { createVersion, versions, branches } = useVersionControl(id);
 
+  // Initialize autosave with the save handler
+  const { saveStatus } = useAutosave({
+    onSave: handleSave,
+    content: {
+      title: promptTitle,
+      content: promptContent,
+      tags: promptTags,
+      model: selectedModel,
+      parallelText
+    }
+  });
+
   // Calculate token and character counts
   const charCount = promptContent.length;
   const wordCount = promptContent.trim().split(/\s+/).length;
