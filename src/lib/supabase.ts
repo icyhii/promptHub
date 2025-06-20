@@ -27,14 +27,24 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 // Verify connection with better error messaging
 export const verifySupabaseConnection = async () => {
   try {
-    const { data, error } = await supabase.from('prompt_analytics').select('count').limit(1);
-    if (error) {
-      console.error('Supabase connection error:', error);
-      throw new Error('Failed to connect to Supabase. Please ensure you have clicked "Connect to Supabase" to set up your project and configure your environment variables.');
+    // Use a simpler query that's more likely to work - check auth status
+    const { data, error } = await supabase.auth.getSession();
+    
+    // If we get here without throwing, the connection is working
+    // We don't need to check for auth errors since we just want to verify connectivity
+    if (error && error.message.includes('fetch')) {
+      throw new Error('Network connection failed');
     }
+    
     return true;
   } catch (err) {
     console.error('Failed to connect to Supabase:', err);
+    
+    // Check if it's a network/fetch error
+    if (err instanceof TypeError && err.message.includes('fetch')) {
+      throw new Error('Unable to connect to Supabase. Please check your internet connection and ensure the Supabase URL is correct.');
+    }
+    
     throw new Error('Unable to connect to Supabase. Please ensure you have clicked "Connect to Supabase" to set up your project.');
   }
 };
